@@ -1,0 +1,531 @@
+---
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f8f6ef" />
+    <meta name="description" content="Review your Preloved Little Pages book basket and send an enquiry." />
+    <title>Your Basket — Preloved Little Pages</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="announcement">
+      <span aria-hidden="true">✳</span> Little stories, lighter footprints.
+      <a href="/#our-story">Find out why <span aria-hidden="true">→</span></a>
+    </div>
+
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Preloved Little Pages home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 42 42" fill="none">
+            <path d="M7 10.5c5.8-2.6 10.5-1.6 14 1.1v22c-3.5-2.7-8.2-3.7-14-1.1v-22Z" />
+            <path d="M35 10.5c-5.8-2.6-10.5-1.6-14 1.1v22c3.5-2.7 8.2-3.7 14-1.1v-22Z" />
+            <path d="M11 16c3.1-.7 5.7-.3 8 1.1M11 21c3.1-.7 5.7-.3 8 1.1M31 16c-3.1-.7-5.7-.3-8 1.1M31 21c-3.1-.7-5.7-.3-8 1.1" />
+          </svg>
+        </span>
+        <span class="brand-name">Preloved <b>Little Pages</b></span>
+      </a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="/">Home</a>
+        <a href="/books/">Shop books</a>
+        <a class="current" href="/basket/" aria-current="page">Basket</a>
+      </nav>
+      <a class="basket-link" data-basket-link href="/basket/" aria-label="Basket, 0 books">
+        Basket <span class="basket-count" data-basket-count>0</span>
+      </a>
+      <a class="header-cta" href="/books/">Shop Books <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <main class="page-width basket-main">
+      <span class="eyebrow"><span aria-hidden="true">✳</span> Your little book basket</span>
+      <h1>Your basket</h1>
+      <p class="intro">Check your chosen stories before sending an enquiry.</p>
+
+      <div class="basket-state" id="basket-state" role="status" aria-live="polite">
+        Checking availability and prices...
+      </div>
+      <button class="retry-button" id="retry-basket" type="button" hidden>Try again</button>
+      <div class="basket-list" id="basket-list" hidden></div>
+
+      <section class="basket-summary" id="basket-summary" aria-labelledby="summary-title" hidden>
+        <div class="total-row">
+          <h2 id="summary-title"><span id="total-label">Book total</span> <span>(postage not included)</span></h2>
+          <strong id="basket-total">£0.00</strong>
+        </div>
+        <p>Postage and payment will be arranged separately. An enquiry does not reserve books; availability is confirmed separately.</p>
+        <button class="enquire-button" id="enquire-button" type="button">Enquire to Buy <span aria-hidden="true">→</span></button>
+        <a class="email-fallback" id="email-fallback" hidden>Open your email app if it didn’t open automatically</a>
+        <p class="enquiry-status" id="enquiry-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <div class="empty-basket" id="empty-basket" hidden>
+        <p>Your basket is waiting for a story.</p>
+        <a class="continue-link" href="/books/">Explore the books <span aria-hidden="true">→</span></a>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="page-width footer-inner">
+        <a class="brand footer-brand" href="/">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 42 42" fill="none">
+              <path d="M7 10.5c5.8-2.6 10.5-1.6 14 1.1v22c-3.5-2.7-8.2-3.7-14-1.1v-22Z" />
+              <path d="M35 10.5c-5.8-2.6-10.5-1.6-14 1.1v22c3.5-2.7 8.2-3.7 14-1.1v-22Z" />
+              <path d="M11 16c3.1-.7 5.7-.3 8 1.1M11 21c3.1-.7 5.7-.3 8 1.1M31 16c-3.1-.7-5.7-.3-8 1.1M31 21c-3.1-.7-5.7-.3-8 1.1" />
+            </svg>
+          </span>
+          <span class="brand-name">Preloved <b>Little Pages</b></span>
+        </a>
+        <span class="footer-handle">@preloved little pages</span>
+        <a class="back-home" href="/">Back to homepage <span aria-hidden="true">↑</span></a>
+      </div>
+      <div class="page-width footer-bottom">
+        <span>© 2026 Preloved Little Pages</span>
+        <span>Small pages. Big-hearted stories.</span>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<script>
+  import { getBasketIds, normalizeBookId, onBasketChange, removeBasketId } from '../lib/basket';
+  import { getSupabaseClient } from '../lib/supabase';
+
+  type BookRow = Record<string, unknown>;
+
+  type BasketBook = {
+    id: string;
+    title: string;
+    author: string;
+    pricePence: number | undefined;
+    imageUrl: string | undefined;
+    sold: boolean;
+    missing: boolean;
+  };
+
+  const basketState = document.querySelector<HTMLDivElement>('#basket-state');
+  const basketList = document.querySelector<HTMLDivElement>('#basket-list');
+  const basketSummary = document.querySelector<HTMLElement>('#basket-summary');
+  const basketTotal = document.querySelector<HTMLElement>('#basket-total');
+  const totalLabel = document.querySelector<HTMLElement>('#total-label');
+  const emptyBasket = document.querySelector<HTMLDivElement>('#empty-basket');
+  const retryButton = document.querySelector<HTMLButtonElement>('#retry-basket');
+  const enquireButton = document.querySelector<HTMLButtonElement>('#enquire-button');
+  const enquiryStatus = document.querySelector<HTMLParagraphElement>('#enquiry-status');
+  const emailFallback = document.querySelector<HTMLAnchorElement>('#email-fallback');
+  const basketLinks = [...document.querySelectorAll<HTMLAnchorElement>('[data-basket-link]')];
+  let requestNumber = 0;
+
+  function getString(row: BookRow, key: string, fallback: string): string {
+    const value = row[key];
+    return typeof value === 'string' && value.trim() ? value.trim() : fallback;
+  }
+
+  function getPricePence(value: unknown): number | undefined {
+    if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+      return Math.round(value * 100);
+    }
+
+    if (typeof value !== 'string') return undefined;
+    const normalized = value.trim().replace(/^£\s*/, '');
+    if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) return undefined;
+    return Math.round(Number(normalized) * 100);
+  }
+
+  function formatPrice(pence: number): string {
+    return `£${(pence / 100).toFixed(2)}`;
+  }
+
+  function getImageUrl(row: BookRow): string | undefined {
+    const value = row.image_url;
+    if (typeof value !== 'string' || !value.trim()) return undefined;
+    try {
+      const url = new URL(value, window.location.origin);
+      return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  function updateBasketLinks() {
+    try {
+      const count = getBasketIds().length;
+      for (const link of basketLinks) {
+        const badge = link.querySelector<HTMLElement>('[data-basket-count]');
+        if (badge) badge.textContent = String(count);
+        link.setAttribute('aria-label', `Basket, ${count} ${count === 1 ? 'book' : 'books'}`);
+      }
+    } catch (error) {
+      console.error('Unable to read the saved basket:', error);
+    }
+  }
+
+  function createBasketItem(book: BasketBook): HTMLElement {
+    const item = document.createElement('article');
+    item.className = 'basket-item';
+
+    if (book.imageUrl) {
+      const image = document.createElement('img');
+      image.className = 'basket-cover';
+      image.src = book.imageUrl;
+      image.alt = `Cover of ${book.title}`;
+      image.loading = 'lazy';
+      item.append(image);
+    } else {
+      const coverPlaceholder = document.createElement('div');
+      coverPlaceholder.className = 'basket-cover-placeholder';
+      coverPlaceholder.textContent = 'A little story';
+      coverPlaceholder.setAttribute('aria-hidden', 'true');
+      item.append(coverPlaceholder);
+    }
+
+    const details = document.createElement('div');
+    details.className = 'basket-details';
+    const title = document.createElement('h2');
+    title.textContent = book.title;
+    const author = document.createElement('p');
+    author.className = 'basket-author';
+    author.textContent = book.author;
+    details.append(title, author);
+
+    const status = document.createElement('p');
+    status.className = book.missing ? 'availability unavailable' : book.sold ? 'availability sold' : 'availability';
+    status.textContent = book.missing ? 'No longer listed' : book.sold ? 'Sold — no longer available' : 'Available to enquire about';
+    details.append(status);
+    item.append(details);
+
+    const actions = document.createElement('div');
+    actions.className = 'basket-actions';
+    const price = document.createElement('strong');
+    price.className = 'basket-price';
+    price.textContent = book.pricePence === undefined ? 'Price unavailable' : formatPrice(book.pricePence);
+    const removeButton = document.createElement('button');
+    removeButton.className = 'remove-button';
+    removeButton.type = 'button';
+    removeButton.textContent = 'Remove';
+    removeButton.setAttribute('aria-label', `Remove ${book.title} from your basket`);
+    removeButton.addEventListener('click', () => {
+      try {
+        if (!removeBasketId(book.id)) return;
+        if (enquiryStatus) enquiryStatus.textContent = '';
+      } catch (error) {
+        console.error('Unable to update the saved basket:', error);
+        if (enquiryStatus) enquiryStatus.textContent = 'We couldn’t update your basket. Please check your browser storage settings.';
+      }
+    });
+    actions.append(price, removeButton);
+    item.append(actions);
+    return item;
+  }
+
+  function renderBooks(books: BasketBook[]) {
+    if (!basketList || !basketSummary || !basketTotal || !totalLabel || !emptyBasket) return;
+
+    if (books.length === 0) {
+      basketList.hidden = true;
+      basketSummary.hidden = true;
+      emptyBasket.hidden = false;
+      return;
+    }
+
+    emptyBasket.hidden = true;
+    basketList.replaceChildren(...books.map(createBasketItem));
+    basketList.hidden = false;
+    basketSummary.hidden = false;
+
+    const availableBooks = books.filter((book) => !book.sold && !book.missing && book.pricePence !== undefined);
+    const totalPence = availableBooks.reduce((total, book) => total + (book.pricePence ?? 0), 0);
+    basketTotal.textContent = formatPrice(totalPence);
+    totalLabel.textContent = availableBooks.length === books.length ? 'Book total' : 'Available books subtotal';
+  }
+
+  async function fetchCurrentBooks(ids: string[]): Promise<BasketBook[]> {
+    const { data, error } = await getSupabaseClient()
+      .from('books')
+      .select('id,title,author,price,image_url,sold')
+      .in('id', ids);
+
+    if (error) throw error;
+    if (!Array.isArray(data)) throw new Error('Supabase returned an invalid basket response.');
+
+    const rows = data.filter(
+      (row): row is BookRow => typeof row === 'object' && row !== null && !Array.isArray(row),
+    );
+    const rowsById = new Map<string, BookRow>();
+    for (const row of rows) {
+      const id = normalizeBookId(row.id);
+      if (id) rowsById.set(id, row);
+    }
+
+    return ids.map((id) => {
+      const row = rowsById.get(id);
+      if (!row) {
+        return {
+          id,
+          title: 'This book is no longer listed',
+          author: '',
+          pricePence: undefined,
+          imageUrl: undefined,
+          sold: false,
+          missing: true,
+        };
+      }
+
+      return {
+        id,
+        title: getString(row, 'title', 'Untitled book'),
+        author: getString(row, 'author', 'Author not listed'),
+        pricePence: getPricePence(row.price),
+        imageUrl: getImageUrl(row),
+        sold: row.sold === true,
+        missing: false,
+      };
+    });
+  }
+
+  async function loadBasket() {
+    const thisRequest = ++requestNumber;
+    if (!basketState || !basketList || !basketSummary || !emptyBasket || !retryButton || !enquireButton) return;
+
+    basketState.hidden = false;
+    basketState.textContent = 'Checking availability and prices...';
+    basketList.hidden = true;
+    basketSummary.hidden = true;
+    emptyBasket.hidden = true;
+    retryButton.hidden = true;
+    enquireButton.disabled = true;
+    updateBasketLinks();
+
+    try {
+      const ids = getBasketIds();
+      if (ids.length === 0) {
+        if (thisRequest !== requestNumber) return;
+        basketState.hidden = true;
+        emptyBasket.hidden = false;
+        return;
+      }
+
+      const books = await fetchCurrentBooks(ids);
+      if (thisRequest !== requestNumber) return;
+      basketState.hidden = true;
+      renderBooks(books);
+    } catch (error) {
+      if (thisRequest !== requestNumber) return;
+      console.error('Unable to refresh the basket from Supabase:', error);
+      basketState.textContent = 'We couldn’t check your basket. Please try again before sending an enquiry.';
+      retryButton.hidden = false;
+    } finally {
+      if (thisRequest === requestNumber) enquireButton.disabled = false;
+    }
+  }
+
+  async function prepareEnquiry() {
+    if (!enquireButton || !enquiryStatus) return;
+
+    let ids: string[];
+    try {
+      ids = getBasketIds();
+    } catch (error) {
+      console.error('Unable to read the saved basket:', error);
+      enquiryStatus.textContent = 'We couldn’t read your basket. Please check your browser storage settings.';
+      return;
+    }
+    if (ids.length === 0) {
+      enquiryStatus.textContent = 'Your basket is empty. Add a book before enquiring.';
+      await loadBasket();
+      return;
+    }
+
+    enquireButton.disabled = true;
+    enquiryStatus.textContent = 'Rechecking availability and prices...';
+    if (emailFallback) {
+      emailFallback.hidden = true;
+      emailFallback.removeAttribute('href');
+    }
+    try {
+      const books = await fetchCurrentBooks(ids);
+      const currentIds = getBasketIds();
+      if (currentIds.length !== ids.length || currentIds.some((id, index) => id !== ids[index])) {
+        enquiryStatus.textContent = 'Your basket changed while we checked it. Please review it and enquire again.';
+        await loadBasket();
+        return;
+      }
+      renderBooks(books);
+      const unavailable = books.filter((book) => book.missing || book.sold);
+      const missingPrices = books.filter((book) => !book.missing && book.pricePence === undefined);
+
+      if (unavailable.length > 0) {
+        const soldTitles = unavailable.map((book) => book.title).join(', ');
+        enquiryStatus.textContent = `Please remove sold or unavailable books before enquiring: ${soldTitles}.`;
+        return;
+      }
+      if (missingPrices.length > 0) {
+        enquiryStatus.textContent = 'A current price could not be verified. Please try again later.';
+        return;
+      }
+
+      const totalPence = books.reduce((total, book) => total + (book.pricePence ?? 0), 0);
+      const lines = books.map((book) => `- ${book.title.replace(/[\r\n]+/g, ' ')} — ${formatPrice(book.pricePence ?? 0)}`);
+      const body = [
+        'Hello Preloved Little Pages,',
+        '',
+        'I would like to enquire about these books:',
+        ...lines,
+        '',
+        `Total for books: ${formatPrice(totalPence)}`,
+        '',
+        'Please confirm current availability, postage costs and payment arrangements.',
+        'Postage and payment will be arranged separately.',
+        'I understand this enquiry does not reserve the books and availability must be confirmed.',
+        '',
+        'Thank you.',
+      ].join('\n');
+      const query = new URLSearchParams({
+        subject: 'Book enquiry — Preloved Little Pages',
+        body,
+      });
+      const mailto = `mailto:sales@prelovedlittlepages.co.uk?${query.toString()}`;
+      if (emailFallback) {
+        emailFallback.href = mailto;
+        emailFallback.hidden = false;
+      }
+      enquiryStatus.textContent = 'Your email app should open with a prepared enquiry. This enquiry does not reserve the books.';
+      window.location.href = mailto;
+    } catch (error) {
+      console.error('Unable to verify the basket before enquiry:', error);
+      enquiryStatus.textContent = 'We couldn’t recheck the books. Please try again before sending an enquiry.';
+    } finally {
+      enquireButton.disabled = false;
+    }
+  }
+
+  retryButton?.addEventListener('click', loadBasket);
+  enquireButton?.addEventListener('click', prepareEnquiry);
+  onBasketChange(() => {
+    void loadBasket();
+  });
+  void loadBasket();
+</script>
+
+<style>
+  :root {
+    --ink: #263d32;
+    --green: #355747;
+    --green-deep: #264536;
+    --cream: #f8f6ef;
+    --paper: #fffdf8;
+    --line: #e7e4da;
+    --pink: #efb4b1;
+    --orange: #e48c58;
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'DM Sans', Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; color: var(--ink); background: var(--cream); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  .page-width { width: min(1160px, calc(100% - 64px)); margin-inline: auto; }
+  .announcement { min-height: 34px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #fffdf8; background: var(--green-deep); font-size: 11px; letter-spacing: .035em; }
+  .announcement > span { color: #e9bd7a; font-size: 13px; }
+  .announcement a { margin-left: 5px; color: #e9d4a9; text-decoration: underline; text-underline-offset: 3px; }
+  .site-header { height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-inline: max(32px, calc((100% - 1260px) / 2)); background: var(--pink); }
+  .brand { display: inline-flex; align-items: center; gap: 9px; flex-shrink: 0; }
+  .brand-mark { width: 35px; height: 35px; display: grid; place-items: center; color: var(--green); }
+  .brand-mark svg { width: 100%; }
+  .brand-mark path { stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .brand-name { font-family: var(--serif); font-size: 18px; letter-spacing: -.055em; line-height: 1; }
+  .brand-name b { display: block; font-size: 15px; font-weight: 500; letter-spacing: .005em; }
+  .main-nav { display: flex; align-items: center; gap: 25px; margin-left: auto; }
+  .main-nav a { color: #523e3d; font-size: 12px; }
+  .main-nav a:hover, .main-nav a.current { color: #894f4c; }
+  .main-nav a.current { font-weight: 700; }
+  .basket-link, .header-cta { flex-shrink: 0; display: inline-flex; align-items: center; padding: 10px 12px; border: 1px solid #d6a09e; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .basket-link { gap: 7px; color: #523e3d; }
+  .basket-link:hover, .header-cta:hover { color: white; background: var(--green); }
+  .basket-count { min-width: 17px; height: 17px; display: inline-grid; place-items: center; border-radius: 50%; color: #fffdf8; background: var(--green); font-size: 9px; line-height: 1; }
+  .header-cta span { margin-left: 7px; color: var(--orange); }
+
+  .basket-main { min-height: 58vh; padding-top: 58px; padding-bottom: 82px; }
+  .eyebrow { color: #758174; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+  .eyebrow > span { margin-right: 7px; color: var(--orange); font-size: 14px; vertical-align: -1px; }
+  h1, h2, p { margin-top: 0; }
+  .basket-main h1 { margin: 12px 0 8px; font-family: var(--serif); font-size: clamp(36px, 5vw, 52px); font-weight: 500; letter-spacing: -.055em; }
+  .intro { margin-bottom: 28px; color: #747d72; font-size: 12px; }
+  .basket-state, .empty-basket { padding: 35px 20px; border: 1px solid var(--line); border-radius: 5px; color: #747d72; background: var(--paper); text-align: center; font-size: 12px; }
+  .retry-button { display: block; margin: 12px auto; padding: 9px 15px; border: 1px solid #cfd7cb; border-radius: 3px; color: var(--green); background: transparent; cursor: pointer; font-size: 10px; font-weight: 700; }
+  .retry-button[hidden], .basket-list[hidden] { display: none; }
+  .retry-button:hover { color: #fffdf8; background: var(--green); }
+  .basket-list { display: grid; gap: 13px; }
+  :global(.basket-item) { min-width: 0; display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; align-items: center; gap: 18px; padding: 15px; border: 1px solid #ebe8de; border-radius: 5px; background: var(--paper); }
+  :global(.basket-cover), :global(.basket-cover-placeholder) { width: 76px; height: 96px; display: grid; place-items: center; border-radius: 3px; background: #f0eee6; object-fit: cover; }
+  :global(.basket-cover-placeholder) { padding: 8px; color: var(--green); font-family: var(--serif); font-size: 12px; text-align: center; }
+  :global(.basket-details h2) { margin: 0 0 4px; font-family: var(--serif); font-size: 18px; font-weight: 500; overflow-wrap: anywhere; }
+  :global(.basket-author) { margin: 0 0 8px; color: #92958b; font-size: 10px; }
+  :global(.availability) { margin: 0; color: #567252; font-size: 10px; font-weight: 600; }
+  :global(.availability.sold), :global(.availability.unavailable) { color: #9c554d; }
+  :global(.basket-actions) { display: grid; justify-items: end; gap: 12px; }
+  :global(.basket-price) { color: var(--green); font-size: 13px; white-space: nowrap; }
+  :global(.remove-button) { padding: 6px 0; border: 0; color: #8d5c56; background: transparent; cursor: pointer; font: inherit; font-size: 10px; text-decoration: underline; text-underline-offset: 3px; }
+  :global(.remove-button:hover) { color: #633d38; }
+  .basket-summary { width: min(100%, 520px); margin: 25px 0 0 auto; padding: 22px; border: 1px solid #e7e4da; border-radius: 5px; background: #f0eee6; }
+  .total-row { display: flex; justify-content: space-between; align-items: baseline; gap: 15px; padding-bottom: 14px; border-bottom: 1px solid #dedbd1; }
+  .total-row h2 { margin: 0; font-family: var(--serif); font-size: 18px; font-weight: 500; }
+  .total-row h2 span { color: #85877e; font-family: var(--sans); font-size: 9px; }
+  .total-row strong { color: var(--green); font-size: 17px; }
+  .basket-summary > p { margin: 14px 0; color: #70796f; font-size: 10px; line-height: 1.6; }
+  .enquire-button { width: 100%; min-height: 43px; display: inline-flex; justify-content: center; align-items: center; gap: 9px; border: 0; border-radius: 3px; color: #fffdf8; background: var(--green); cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; }
+  .enquire-button:hover { background: var(--green-deep); }
+  .enquire-button:disabled { opacity: .6; cursor: wait; }
+  .email-fallback { display: block; margin-top: 12px; color: var(--green); font-size: 10px; text-align: center; text-decoration: underline; text-underline-offset: 3px; }
+  .email-fallback[hidden] { display: none; }
+  .enquiry-status { min-height: 0; }
+  .continue-link { color: var(--green); font-size: 11px; font-weight: 700; }
+  .continue-link span { color: var(--orange); }
+  .site-footer { padding: 31px 0 17px; border-top: 1px solid #e8e4d9; background: #f3f1e8; }
+  .footer-inner { min-height: 49px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+  .footer-brand .brand-mark { width: 29px; height: 29px; }
+  .footer-brand .brand-name { font-size: 15px; }
+  .footer-brand .brand-name b { font-size: 13px; }
+  .footer-handle, .back-home { color: #747d72; font-size: 10px; }
+  .back-home span { margin-left: 6px; color: var(--orange); font-size: 14px; }
+  .footer-bottom { display: flex; justify-content: space-between; gap: 15px; margin-top: 24px; padding-top: 15px; border-top: 1px solid #e4e1d7; color: #9a9b91; font-size: 9px; }
+
+  @media (max-width: 900px) {
+    .main-nav { gap: 14px; }
+    .site-header { gap: 12px; }
+  }
+
+  @media (max-width: 650px) {
+    .page-width { width: min(100% - 36px, 500px); }
+    .announcement { padding-inline: 10px; font-size: 9px; }
+    .site-header { height: 70px; gap: 8px; padding-inline: 12px; }
+    .brand { gap: 5px; }
+    .brand-mark { width: 26px; height: 26px; }
+    .brand-name { font-size: 14px; }
+    .brand-name b { font-size: 12px; }
+    .main-nav { display: none; }
+    .basket-link, .header-cta { padding: 8px; font-size: 9px; }
+    .basket-link { gap: 4px; }
+    .header-cta span { margin-left: 4px; }
+    .basket-main { padding-top: 42px; padding-bottom: 58px; }
+    :global(.basket-item) { grid-template-columns: 58px minmax(0, 1fr) auto; gap: 11px; padding: 11px; }
+    :global(.basket-cover), :global(.basket-cover-placeholder) { width: 58px; height: 76px; }
+    :global(.basket-details h2) { font-size: 15px; }
+    :global(.basket-author), :global(.availability) { font-size: 9px; }
+    :global(.basket-price) { font-size: 11px; }
+    :global(.basket-actions) { gap: 8px; }
+    .basket-summary { padding: 16px; }
+    .total-row h2 { font-size: 16px; }
+    .footer-inner { flex-wrap: wrap; }
+    .footer-handle { order: 3; width: 100%; }
+    .footer-bottom { font-size: 8px; }
+  }
+</style>

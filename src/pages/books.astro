@@ -41,6 +41,9 @@
         <a href="/#how-it-works">How it works</a>
         <a href="/#our-story">Our story</a>
       </nav>
+      <a class="basket-link" data-basket-link href="/basket/" aria-label="Basket, 0 books">
+        Basket <span class="basket-count" data-basket-count>0</span>
+      </a>
       <a class="header-cta" href="/#books">Homepage <span aria-hidden="true">↗</span></a>
     </header>
 
@@ -64,6 +67,7 @@
           </div>
           <p><span id="book-count">Loading</span> lovely finds <span aria-hidden="true">✦</span></p>
         </div>
+        <p class="basket-feedback" id="basket-feedback" role="status" aria-live="polite" hidden></p>
 
         <div class="catalog-state" id="catalog-state" role="status" aria-live="polite">
           Finding lovely books for you...
@@ -97,6 +101,7 @@
 </html>
 
 <script>
+  import { addBasketId, getBasketIds, normalizeBookId, onBasketChange } from '../lib/basket';
   import { getSupabaseClient } from '../lib/supabase';
 
   type BookRow = Record<string, unknown>;
@@ -105,6 +110,49 @@
   const catalogState = document.querySelector<HTMLDivElement>('#catalog-state');
   const bookCount = document.querySelector<HTMLSpanElement>('#book-count');
   const retryButton = document.querySelector<HTMLButtonElement>('#retry-books');
+  const basketFeedback = document.querySelector<HTMLParagraphElement>('#basket-feedback');
+  const basketLinks = [...document.querySelectorAll<HTMLAnchorElement>('[data-basket-link]')];
+
+  function updateBasketLinks() {
+    try {
+      const count = getBasketIds().length;
+      for (const link of basketLinks) {
+        const badge = link.querySelector<HTMLElement>('[data-basket-count]');
+        if (badge) badge.textContent = String(count);
+        link.setAttribute('aria-label', `Basket, ${count} ${count === 1 ? 'book' : 'books'}`);
+      }
+    } catch (error) {
+      console.error('Unable to read the saved basket:', error);
+    }
+  }
+
+  function updateBasketButtons() {
+    let savedIds: Set<string>;
+    try {
+      savedIds = new Set(getBasketIds());
+    } catch (error) {
+      console.error('Unable to read the saved basket:', error);
+      savedIds = new Set();
+    }
+
+    for (const button of bookGrid?.querySelectorAll<HTMLButtonElement>('[data-book-id]') ?? []) {
+      const id = button.dataset.bookId;
+      const isSold = button.dataset.sold === 'true';
+      const isInBasket = Boolean(id && savedIds.has(id));
+      const label = isSold ? 'Sold' : !id ? 'Unavailable' : isInBasket ? 'In Basket' : 'Add to Basket';
+      button.disabled = isSold || !id || isInBasket;
+      button.setAttribute('aria-label', isSold ? 'This book is sold' : `${label}: ${button.dataset.title ?? 'book'}`);
+      if (button.firstChild?.nodeType === Node.TEXT_NODE) {
+        button.firstChild.textContent = `${label} `;
+      }
+    }
+  }
+
+  updateBasketLinks();
+  onBasketChange(() => {
+    updateBasketLinks();
+    updateBasketButtons();
+  });
 
   function getString(row: BookRow, keys: string[]): string | undefined {
     for (const key of keys) {
@@ -144,6 +192,7 @@
     const title = getString(row, ['title', 'name']) ?? 'Untitled book';
     const author = getString(row, ['author', 'authors']) ?? 'Author not listed';
     const condition = getString(row, ['condition']) ?? 'Condition not listed';
+    const id = normalizeBookId(row.id);
     const isSold = row.sold === true;
     const normalizedCondition = condition.toLowerCase().replace(/\s+/g, '-');
 
@@ -220,13 +269,38 @@
     const buyButton = document.createElement('button');
     buyButton.className = 'buy-button';
     buyButton.type = 'button';
-    buyButton.disabled = isSold;
-    buyButton.setAttribute('aria-label', isSold ? `${title} is sold` : `Buy ${title} now`);
-    buyButton.append(document.createTextNode(isSold ? 'Sold ' : 'Buy Now '));
+    buyButton.dataset.bookId = id ?? '';
+    buyButton.dataset.sold = String(isSold);
+    buyButton.dataset.title = title;
+    buyButton.append(document.createTextNode('Add to Basket '));
     const arrow = document.createElement('span');
     arrow.setAttribute('aria-hidden', 'true');
     arrow.textContent = '→';
     buyButton.append(arrow);
+    buyButton.addEventListener('click', () => {
+      if (!id) return;
+      try {
+        if (!addBasketId(id)) {
+          if (basketFeedback) {
+            basketFeedback.textContent = 'This book is already in your basket.';
+            basketFeedback.hidden = false;
+          }
+          return;
+        }
+        if (basketFeedback) {
+          basketFeedback.textContent = `${title} was added to your basket.`;
+          basketFeedback.hidden = false;
+        }
+        updateBasketLinks();
+        updateBasketButtons();
+      } catch (error) {
+        console.error('Unable to save the basket:', error);
+        if (basketFeedback) {
+          basketFeedback.textContent = 'We couldn’t save your basket. Please check your browser storage settings.';
+          basketFeedback.hidden = false;
+        }
+      }
+    });
 
     bottom.append(conditionCopy, buyButton);
     details.append(heading, authorElement, bottom);
@@ -265,6 +339,7 @@
       }
 
       bookGrid.append(...rows.map(createBookCard));
+      updateBasketButtons();
       bookGrid.hidden = false;
       catalogState.hidden = true;
     } catch (error) {
@@ -339,8 +414,13 @@
   .catalog-heading > p { margin: 0 0 5px; color: #83877d; font-size: 10px; }
   .catalog-heading > p span { margin-left: 5px; color: var(--orange); }
   .catalog-state { padding: 38px 16px; color: #747d72; text-align: center; font-size: 12px; }
+  .basket-feedback { margin: -10px 0 18px; color: var(--green); font-size: 11px; }
   .retry-button { display: block; margin: -20px auto 28px; padding: 9px 15px; border: 1px solid #cfd7cb; border-radius: 3px; color: var(--green); background: transparent; cursor: pointer; font-size: 10px; font-weight: 700; }
+  .retry-button[hidden] { display: none; }
   .retry-button:hover { color: #fffdf8; background: var(--green); }
+  .basket-link { flex-shrink: 0; display: inline-flex; align-items: center; gap: 7px; padding: 10px 12px; border: 1px solid #d6a09e; border-radius: 999px; color: #523e3d; font-size: 11px; font-weight: 700; transition: background .2s, color .2s; }
+  .basket-link:hover { color: #fffdf8; background: var(--green); }
+  .basket-count { min-width: 17px; height: 17px; display: inline-grid; place-items: center; border-radius: 50%; color: #fffdf8; background: var(--green); font-size: 9px; line-height: 1; }
   .book-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px 20px; }
   .book-grid[hidden] { display: none; }
   :global(.book-card) { min-width: 0; overflow: hidden; border: 1px solid #ebe8de; border-radius: 5px; background: var(--paper); transition: transform .2s ease, box-shadow .2s ease; }
@@ -385,12 +465,15 @@
   @media (max-width: 650px) {
     .page-width { width: min(100% - 36px, 500px); }
     .announcement { padding-inline: 10px; font-size: 9px; }
-    .site-header { height: 70px; padding-inline: 18px; }
-    .brand-mark { width: 30px; height: 30px; }
-    .brand-name { font-size: 16px; }
-    .brand-name b { font-size: 13px; }
+    .site-header { height: 70px; gap: 8px; padding-inline: 12px; }
+    .brand { gap: 5px; }
+    .brand-mark { width: 26px; height: 26px; }
+    .brand-name { font-size: 14px; }
+    .brand-name b { font-size: 12px; }
     .main-nav { display: none; }
-    .header-cta { padding: 10px 12px; font-size: 10px; }
+    .basket-link { gap: 4px; padding: 8px; font-size: 9px; }
+    .header-cta { padding: 8px 9px; font-size: 9px; }
+    .header-cta span { margin-left: 4px; }
     .books-hero { padding: 50px 0 44px; }
     .books-hero h1 { font-size: clamp(43px, 12vw, 58px); }
     .books-hero p { max-width: 275px; font-size: 12px; }

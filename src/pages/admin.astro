@@ -388,11 +388,14 @@
     const name = document.createElement('h3');
     name.textContent = title;
     const meta = document.createElement('p');
-    meta.textContent = `${author} · ${condition}`;
+    meta.textContent = author;
     const price = document.createElement('span');
     price.className = 'inventory-price';
     price.textContent = formatPrice(book.price);
-    details.append(name, meta, price);
+    const conditionLabel = document.createElement('p');
+    conditionLabel.className = 'inventory-condition';
+    conditionLabel.textContent = `Condition: ${condition}`;
+    details.append(name, meta, price, conditionLabel);
 
     const status = document.createElement('span');
     status.className = sold ? 'sold-label is-sold' : 'sold-label';
@@ -712,7 +715,7 @@
   .admin-layout { display: grid; grid-template-columns: minmax(270px, .75fr) minmax(0, 1.25fr); align-items: start; gap: 22px; }
   .editor-panel, .inventory-panel { padding: 22px; }
   .editor-panel .panel-heading h2 { font-size: 22px; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
   .form-row label { margin-top: 14px; }
   .label-note { display: block; margin-top: 4px; color: #92958b; font-size: 9px; font-weight: 400; }
   .checkbox-row { display: flex !important; align-items: center; gap: 8px; margin: 15px 0 0 !important; font-weight: 500 !important; }
@@ -723,18 +726,21 @@
   .inventory-heading h2 { font-size: 22px; }
   .inventory-state { padding: 26px 8px; color: #778075; text-align: center; font-size: 11px; }
   .inventory-list { display: grid; gap: 10px; }
-  .inventory-item { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid #ece9e0; border-radius: 4px; background: #fffefa; }
-  .inventory-cover, .inventory-cover-fallback { width: 46px; height: 62px; display: grid; place-items: center; border-radius: 2px; color: #617862; background: linear-gradient(145deg, #dce8ce, #efdfc4 58%, #e8c9b8); object-fit: cover; }
-  .inventory-cover-fallback { font-size: 22px; }
-  .inventory-details { min-width: 0; }
-  .inventory-details h3 { margin: 0 0 4px; overflow-wrap: anywhere; font-family: var(--serif); font-size: 15px; font-weight: 500; }
-  .inventory-details p { margin: 0 0 5px; color: #8a8e84; font-size: 9px; }
-  .inventory-price { color: var(--green); font-size: 10px; font-weight: 700; }
-  .sold-label { padding: 5px 7px; border-radius: 99px; color: #42644c; background: #e0ead9; font-size: 8px; font-weight: 700; }
-  .sold-label.is-sold { color: #865548; background: #f1dcd3; }
-  .inventory-actions { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
-  .small-button { min-height: 30px; padding: 0 9px; border-color: #e1e3da; color: #536454; background: transparent; font-size: 9px; }
-  .danger-button { color: #9a5c50; }
+  :global(.inventory-item) { min-width: 0; max-width: 100%; overflow: hidden; display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid #ece9e0; border-radius: 4px; background: #fffefa; }
+  :global(.inventory-cover), :global(.inventory-cover-fallback) { width: 76px; max-width: 100%; height: 110px; max-height: 180px; display: grid; place-items: center; border-radius: 2px; color: #617862; background: linear-gradient(145deg, #dce8ce, #efdfc4 58%, #e8c9b8); }
+  :global(.inventory-cover) { object-fit: contain; }
+  :global(.inventory-cover-fallback) { font-size: 22px; }
+  :global(.inventory-details) { min-width: 0; overflow-wrap: anywhere; }
+  :global(.inventory-details h3) { margin: 0 0 4px; overflow-wrap: anywhere; font-family: var(--serif); font-size: 15px; font-weight: 500; }
+  :global(.inventory-details p) { margin: 0 0 5px; color: #8a8e84; font-size: 9px; overflow-wrap: anywhere; }
+  :global(.inventory-price) { display: block; margin-bottom: 3px; color: var(--green); font-size: 10px; font-weight: 700; }
+  :global(.inventory-condition) { margin-bottom: 0 !important; color: #747d72 !important; }
+  :global(.sold-label) { padding: 5px 7px; border-radius: 99px; color: #42644c; background: #e0ead9; font-size: 8px; font-weight: 700; }
+  :global(.sold-label.is-sold) { color: #865548; background: #f1dcd3; }
+  :global(.inventory-actions) { min-width: 0; grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+  :global(.small-button) { min-height: 36px; padding: 0 9px; border: 1px solid #e1e3da; border-radius: 3px; color: #536454; background: transparent; cursor: pointer; font: inherit; font-size: 9px; font-weight: 700; }
+  :global(.small-button:hover) { border-color: var(--green); background: #edf1e9; }
+  :global(.danger-button) { color: #9a5c50; }
   .site-footer { padding: 20px 0; border-top: 1px solid #e8e4d9; color: #83877d; background: #f3f1e8; font-size: 9px; }
   .footer-inner { display: flex; justify-content: space-between; gap: 12px; }
 
@@ -744,18 +750,26 @@
 
   @media (max-width: 580px) {
     .page-width { width: calc(100% - 32px); }
-    .site-header { height: 68px; padding-inline: 16px; }
+    .site-header { height: 68px; gap: 10px; padding-inline: 12px; }
     .brand-mark { width: 29px; height: 29px; }
     .brand-name { font-size: 15px; }
     .brand-name b { font-size: 13px; }
     .back-link { font-size: 9px; }
     main { padding: 35px 0 48px; }
     .login-panel, .editor-panel, .inventory-panel { padding: 18px; }
-    .inventory-item { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 9px; padding: 9px; }
-    .inventory-cover, .inventory-cover-fallback { width: 40px; height: 56px; }
-    .inventory-details h3 { font-size: 13px; }
-    .inventory-actions { gap: 5px; }
-    .small-button { min-height: 28px; padding-inline: 7px; font-size: 8px; }
+    .form-row { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .form-actions { flex-direction: column; }
+    .form-actions button, .login-panel .primary-button { width: 100%; min-height: 44px; }
+    .dashboard-heading .quiet-button, .inventory-heading .quiet-button { min-height: 44px; }
+    input:not([type="checkbox"]):not([type="file"]), select, textarea { min-height: 44px; }
+    input[type="file"] { max-width: 100%; min-width: 0; }
+    :global(.inventory-item) { grid-template-columns: 68px minmax(0, 1fr) auto; gap: 9px; padding: 9px; }
+    :global(.inventory-cover), :global(.inventory-cover-fallback) { width: 68px; height: 120px; max-height: 180px; }
+    :global(.inventory-details h3) { font-size: 13px; }
+    :global(.inventory-actions) { gap: 5px; }
+    :global(.small-button) { min-height: 40px; padding-inline: 9px; font-size: 9px; }
+    .dashboard-heading, .inventory-heading { flex-wrap: wrap; }
+    .inventory-heading .quiet-button { min-width: 92px; }
     .footer-inner { flex-direction: column; }
   }
 

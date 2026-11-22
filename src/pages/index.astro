@@ -81,6 +81,9 @@ const books = [
         <a href="#our-story">Our story</a>
       </nav>
 
+      <a class="basket-link" data-basket-link href="/basket/" aria-label="Basket, 0 books">
+        Basket <span class="basket-count" data-basket-count>0</span>
+      </a>
       <a class="header-cta" href="/books/">
         Shop Books <span aria-hidden="true">↗</span>
       </a>
@@ -294,11 +297,30 @@ const books = [
 </html>
 
 <script>
+  import { getBasketIds, onBasketChange } from '../lib/basket';
+
   const searchForm = document.querySelector<HTMLFormElement>('#book-search');
   const searchInput = document.querySelector<HTMLInputElement>('#search-input');
   const bookCards = [...document.querySelectorAll<HTMLElement>('.book-card')];
   const emptyState = document.querySelector<HTMLElement>('#empty-state');
   const categoryLinks = document.querySelectorAll<HTMLAnchorElement>('.category-pill[data-query]');
+  const basketLinks = [...document.querySelectorAll<HTMLAnchorElement>('[data-basket-link]')];
+
+  function updateBasketCount() {
+    try {
+      const count = getBasketIds().length;
+      for (const link of basketLinks) {
+        const badge = link.querySelector<HTMLElement>('[data-basket-count]');
+        if (badge) badge.textContent = String(count);
+        link.setAttribute('aria-label', `Basket, ${count} ${count === 1 ? 'book' : 'books'}`);
+      }
+    } catch (error) {
+      console.error('Unable to read the saved basket:', error);
+    }
+  }
+
+  updateBasketCount();
+  onBasketChange(updateBasketCount);
 
   function filterBooks(query: string) {
     const normalizedQuery = query.trim().toLowerCase();
@@ -400,6 +422,9 @@ const books = [
   .header-cta { padding: 12px 17px; border: 1px solid #d6a09e; border-radius: 999px; font-size: 11px; font-weight: 700; transition: background .2s, color .2s; }
   .header-cta span { margin-left: 8px; color: var(--orange); }
   .header-cta:hover { color: white; background: var(--green); }
+  .basket-link { flex-shrink: 0; display: inline-flex; align-items: center; gap: 7px; padding: 10px 12px; border: 1px solid #d6a09e; border-radius: 999px; color: #523e3d; font-size: 11px; font-weight: 700; transition: background .2s, color .2s; }
+  .basket-link:hover { color: #fffdf8; background: var(--green); }
+  .basket-count { min-width: 17px; height: 17px; display: inline-grid; place-items: center; border-radius: 50%; color: #fffdf8; background: var(--green); font-size: 9px; line-height: 1; }
 
   .hero {
     position: relative;
@@ -587,12 +612,15 @@ const books = [
   @media (max-width: 650px) {
     .page-width { width: min(100% - 36px, 500px); }
     .announcement { padding-inline: 10px; font-size: 9px; }
-    .site-header { height: 70px; padding-inline: 18px; }
-    .brand-mark { width: 30px; height: 30px; }
-    .brand-name { font-size: 16px; }
-    .brand-name b { font-size: 13px; }
+    .site-header { height: 70px; gap: 8px; padding-inline: 12px; }
+    .brand { gap: 5px; }
+    .brand-mark { width: 26px; height: 26px; }
+    .brand-name { font-size: 14px; }
+    .brand-name b { font-size: 12px; }
     .main-nav { display: none; }
-    .header-cta { padding: 10px 12px; font-size: 10px; }
+    .basket-link { gap: 4px; padding: 8px; font-size: 9px; }
+    .header-cta { padding: 8px 9px; font-size: 9px; }
+    .header-cta span { margin-left: 4px; }
     .hero { min-height: auto; grid-template-columns: 1fr; gap: 18px; padding: 47px 0 83px; }
     .hero-copy { max-width: none; }
     .hero h1 { margin-top: 18px; font-size: clamp(52px, 13vw, 68px); }
