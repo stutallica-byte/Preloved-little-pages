@@ -11,6 +11,7 @@
       name="description"
       content="Shop quality preloved children's books at Preloved Little Pages. Find a new favourite story at a lovely little price."
     />
+    <link rel="icon" type="image/webp" href="/preloved-little-pages-logo.webp" />
     <title>Shop Books — Preloved Little Pages</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -27,13 +28,7 @@
 
     <header class="site-header">
       <a class="brand" href="/" aria-label="Preloved Little Pages home">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 42 42" fill="none">
-            <path d="M7 10.5c5.8-2.6 10.5-1.6 14 1.1v22c-3.5-2.7-8.2-3.7-14-1.1v-22Z" />
-            <path d="M35 10.5c-5.8-2.6-10.5-1.6-14 1.1v22c3.5-2.7 8.2-3.7 14-1.1v-22Z" />
-            <path d="M11 16c3.1-.7 5.7-.3 8 1.1M11 21c3.1-.7 5.7-.3 8 1.1M31 16c-3.1-.7-5.7-.3-8 1.1M31 21c-3.1-.7-5.7-.3-8 1.1" />
-          </svg>
-        </span>
+        <span class="brand-mark" aria-hidden="true"><img src="/preloved-little-pages-logo.webp" alt="" width="56" height="56" decoding="async" /></span>
         <span class="brand-name">Preloved <b>Little Pages</b></span>
       </a>
       <nav class="main-nav" aria-label="Main navigation">
@@ -80,13 +75,7 @@
     <footer class="site-footer">
       <div class="page-width footer-inner">
         <a class="brand footer-brand" href="/">
-          <span class="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 42 42" fill="none">
-              <path d="M7 10.5c5.8-2.6 10.5-1.6 14 1.1v22c-3.5-2.7-8.2-3.7-14-1.1v-22Z" />
-              <path d="M35 10.5c-5.8-2.6-10.5-1.6-14 1.1v22c3.5-2.7 8.2-3.7 14-1.1v-22Z" />
-              <path d="M11 16c3.1-.7 5.7-.3 8 1.1M11 21c3.1-.7 5.7-.3 8 1.1M31 16c-3.1-.7-5.7-.3-8 1.1M31 21c-3.1-.7-5.7-.3-8 1.1" />
-            </svg>
-          </span>
+          <span class="brand-mark" aria-hidden="true"><img src="/preloved-little-pages-logo.webp" alt="" width="56" height="56" decoding="async" /></span>
           <span class="brand-name">Preloved <b>Little Pages</b></span>
         </a>
         <span class="footer-handle">@preloved little pages</span>
@@ -381,7 +370,8 @@
 
   .site-header { height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 28px; padding-inline: max(32px, calc((100% - 1260px) / 2)); background: var(--pink); }
   .brand { display: inline-flex; align-items: center; gap: 9px; flex-shrink: 0; }
-  .brand-mark { width: 35px; height: 35px; display: grid; place-items: center; color: var(--green); }
+  .brand-mark { width: 48px; height: 48px; display: grid; place-items: center; color: var(--green);  }
+  .brand-mark img { width: 100%; height: 100%; display: block; object-fit: contain; border-radius: 50%; }
   .brand-mark svg { width: 100%; }
   .brand-mark path { stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .brand-name { font-family: var(--serif); font-size: 18px; letter-spacing: -.055em; line-height: 1; }
