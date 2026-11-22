@@ -388,11 +388,11 @@
         '',
         'Thank you.',
       ].join('\n');
-      const query = new URLSearchParams({
-        subject: 'Book enquiry — Preloved Little Pages',
-        body,
-      });
-      const mailto = `mailto:sales@prelovedlittlepages.co.uk?${query.toString()}`;
+      // Percent-encode mailto fields because URLSearchParams converts spaces
+      // to '+', which some email applications show literally.
+      const subject = encodeURIComponent('Book enquiry — Preloved Little Pages');
+      const emailBody = encodeURIComponent(body);
+      const mailto = `mailto:sales@prelovedlittlepages.co.uk?subject=${subject}&body=${emailBody}`;
       if (emailFallback) {
         emailFallback.href = mailto;
         emailFallback.hidden = false;
