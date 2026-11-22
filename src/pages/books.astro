@@ -1,0 +1,424 @@
+---
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f8f6ef" />
+    <meta
+      name="description"
+      content="Shop quality preloved children's books at Preloved Little Pages. Find a new favourite story at a lovely little price."
+    />
+    <title>Shop Books — Preloved Little Pages</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="announcement">
+      <span aria-hidden="true">✳</span> Little stories, lighter footprints.
+      <a href="/#our-story">Find out why <span aria-hidden="true">→</span></a>
+    </div>
+
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Preloved Little Pages home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 42 42" fill="none">
+            <path d="M7 10.5c5.8-2.6 10.5-1.6 14 1.1v22c-3.5-2.7-8.2-3.7-14-1.1v-22Z" />
+            <path d="M35 10.5c-5.8-2.6-10.5-1.6-14 1.1v22c3.5-2.7 8.2-3.7 14-1.1v-22Z" />
+            <path d="M11 16c3.1-.7 5.7-.3 8 1.1M11 21c3.1-.7 5.7-.3 8 1.1M31 16c-3.1-.7-5.7-.3-8 1.1M31 21c-3.1-.7-5.7-.3-8 1.1" />
+          </svg>
+        </span>
+        <span class="brand-name">Preloved <b>Little Pages</b></span>
+      </a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a class="current" href="/books/" aria-current="page">Books</a>
+        <a href="/#how-it-works">How it works</a>
+        <a href="/#our-story">Our story</a>
+      </nav>
+      <a class="header-cta" href="/#books">Homepage <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <main>
+      <section class="books-hero">
+        <div class="page-width">
+          <span class="eyebrow"><span aria-hidden="true">✳</span> A shelf full of second chances</span>
+          <h1>Find their next<br /><em>favourite story.</em></h1>
+          <p>Quality preloved books, ready for little hands and big imaginations.</p>
+          <a class="hero-link" href="#book-shelf">Explore the books <span aria-hidden="true">↓</span></a>
+          <span class="hero-doodle doodle-flower" aria-hidden="true">✿</span>
+          <span class="hero-doodle doodle-star" aria-hidden="true">✳</span>
+        </div>
+      </section>
+
+      <section class="catalog page-width" id="book-shelf" aria-labelledby="catalog-title">
+        <div class="catalog-heading">
+          <div>
+            <span class="eyebrow">Picked and checked with care</span>
+            <h2 id="catalog-title">The little bookshop</h2>
+          </div>
+          <p><span id="book-count">Loading</span> lovely finds <span aria-hidden="true">✦</span></p>
+        </div>
+
+        <div class="catalog-state" id="catalog-state" role="status" aria-live="polite">
+          Finding lovely books for you...
+        </div>
+        <button class="retry-button" id="retry-books" type="button" hidden>Try again</button>
+        <div class="book-grid" id="book-grid" aria-busy="true" hidden></div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="page-width footer-inner">
+        <a class="brand footer-brand" href="/">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 42 42" fill="none">
+              <path d="M7 10.5c5.8-2.6 10.5-1.6 14 1.1v22c-3.5-2.7-8.2-3.7-14-1.1v-22Z" />
+              <path d="M35 10.5c-5.8-2.6-10.5-1.6-14 1.1v22c3.5-2.7 8.2-3.7 14-1.1v-22Z" />
+              <path d="M11 16c3.1-.7 5.7-.3 8 1.1M11 21c3.1-.7 5.7-.3 8 1.1M31 16c-3.1-.7-5.7-.3-8 1.1M31 21c-3.1-.7-5.7-.3-8 1.1" />
+            </svg>
+          </span>
+          <span class="brand-name">Preloved <b>Little Pages</b></span>
+        </a>
+        <span class="footer-handle">@preloved little pages</span>
+        <a class="back-home" href="/">Back to homepage <span aria-hidden="true">↑</span></a>
+      </div>
+      <div class="page-width footer-bottom">
+        <span>© 2026 Preloved Little Pages</span>
+        <span>Small pages. Big-hearted stories.</span>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<script>
+  import { getSupabaseClient } from '../lib/supabase';
+
+  type BookRow = Record<string, unknown>;
+
+  const bookGrid = document.querySelector<HTMLDivElement>('#book-grid');
+  const catalogState = document.querySelector<HTMLDivElement>('#catalog-state');
+  const bookCount = document.querySelector<HTMLSpanElement>('#book-count');
+  const retryButton = document.querySelector<HTMLButtonElement>('#retry-books');
+
+  function getString(row: BookRow, keys: string[]): string | undefined {
+    for (const key of keys) {
+      const value = row[key];
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+
+    return undefined;
+  }
+
+  function formatPrice(value: unknown): string {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return `£${value.toFixed(2)}`;
+    }
+
+    if (typeof value === 'string' && value.trim()) {
+      const price = value.trim();
+      return /^\d+(?:\.\d{1,2})?$/.test(price) ? `£${Number(price).toFixed(2)}` : price;
+    }
+
+    return 'Price unavailable';
+  }
+
+  function getImageUrl(row: BookRow): string | undefined {
+    const value = getString(row, ['image_url']);
+    if (!value) return undefined;
+
+    try {
+      const url = new URL(value, window.location.origin);
+      return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  function createBookCard(row: BookRow): HTMLElement {
+    const title = getString(row, ['title', 'name']) ?? 'Untitled book';
+    const author = getString(row, ['author', 'authors']) ?? 'Author not listed';
+    const condition = getString(row, ['condition']) ?? 'Condition not listed';
+    const isSold = row.sold === true;
+    const normalizedCondition = condition.toLowerCase().replace(/\s+/g, '-');
+
+    const card = document.createElement('article');
+    card.className = 'book-card';
+
+    const coverWrap = document.createElement('div');
+    coverWrap.className = 'cover-wrap';
+    const imageUrl = getImageUrl(row);
+
+    if (imageUrl) {
+      const image = document.createElement('img');
+      image.className = 'book-cover';
+      image.src = imageUrl;
+      image.alt = `Cover of ${title}`;
+      image.loading = 'lazy';
+      image.addEventListener('error', () => {
+        image.remove();
+        const placeholder = document.createElement('div');
+        placeholder.className = 'cover-placeholder';
+        placeholder.textContent = title;
+        coverWrap.prepend(placeholder);
+      }, { once: true });
+      coverWrap.append(image);
+    } else {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'cover-placeholder';
+      placeholder.textContent = title;
+      coverWrap.append(placeholder);
+    }
+
+    const conditionBadge = document.createElement('span');
+    conditionBadge.className = `condition ${normalizedCondition}`;
+    conditionBadge.textContent = condition;
+    coverWrap.append(conditionBadge);
+
+    if (isSold) {
+      const soldBadge = document.createElement('span');
+      soldBadge.className = 'sold-badge';
+      soldBadge.textContent = 'Sold';
+      coverWrap.append(soldBadge);
+    }
+
+    const sparkle = document.createElement('span');
+    sparkle.className = 'cover-sparkle';
+    sparkle.setAttribute('aria-hidden', 'true');
+    sparkle.textContent = '✳';
+    coverWrap.append(sparkle);
+
+    const details = document.createElement('div');
+    details.className = 'book-details';
+    const heading = document.createElement('div');
+    heading.className = 'book-heading';
+    const titleElement = document.createElement('h3');
+    titleElement.textContent = title;
+    const priceElement = document.createElement('span');
+    priceElement.className = 'price';
+    priceElement.textContent = formatPrice(row.price);
+    heading.append(titleElement, priceElement);
+
+    const authorElement = document.createElement('p');
+    authorElement.className = 'author';
+    authorElement.textContent = `by ${author}`;
+
+    const bottom = document.createElement('div');
+    bottom.className = 'book-bottom';
+    const conditionCopy = document.createElement('span');
+    conditionCopy.className = 'condition-copy';
+    const conditionIcon = document.createElement('span');
+    conditionIcon.setAttribute('aria-hidden', 'true');
+    conditionIcon.textContent = '✿';
+    conditionCopy.append(conditionIcon, document.createTextNode(` ${condition} condition`));
+
+    const buyButton = document.createElement('button');
+    buyButton.className = 'buy-button';
+    buyButton.type = 'button';
+    buyButton.disabled = isSold;
+    buyButton.setAttribute('aria-label', isSold ? `${title} is sold` : `Buy ${title} now`);
+    buyButton.append(document.createTextNode(isSold ? 'Sold ' : 'Buy Now '));
+    const arrow = document.createElement('span');
+    arrow.setAttribute('aria-hidden', 'true');
+    arrow.textContent = '→';
+    buyButton.append(arrow);
+
+    bottom.append(conditionCopy, buyButton);
+    details.append(heading, authorElement, bottom);
+    card.append(coverWrap, details);
+    return card;
+  }
+
+  async function loadBooks() {
+    if (!bookGrid || !catalogState || !bookCount || !retryButton) return;
+
+    bookGrid.replaceChildren();
+    bookGrid.hidden = true;
+    bookGrid.setAttribute('aria-busy', 'true');
+    catalogState.hidden = false;
+    catalogState.textContent = 'Finding lovely books for you...';
+    retryButton.hidden = true;
+    bookCount.textContent = 'Loading';
+
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('books')
+        .select('id,created_at,title,author,price,condition,description,image_url,sold')
+        .order('title', { ascending: true });
+
+      if (error) throw error;
+      if (!Array.isArray(data)) throw new Error('Supabase returned an invalid books response.');
+
+      const rows = data.filter(
+        (row): row is BookRow => typeof row === 'object' && row !== null && !Array.isArray(row),
+      );
+      bookCount.textContent = String(rows.length);
+
+      if (rows.length === 0) {
+        catalogState.textContent = 'No books found just yet. Please check back soon.';
+        return;
+      }
+
+      bookGrid.append(...rows.map(createBookCard));
+      bookGrid.hidden = false;
+      catalogState.hidden = true;
+    } catch (error) {
+      console.error('Unable to load books from Supabase:', error);
+      catalogState.textContent = 'We couldn’t load the books right now. Please try again.';
+      retryButton.hidden = false;
+    } finally {
+      bookGrid.setAttribute('aria-busy', 'false');
+    }
+  }
+
+  retryButton?.addEventListener('click', loadBooks);
+  void loadBooks();
+</script>
+
+<style>
+  :root {
+    --ink: #263d32;
+    --green: #355747;
+    --green-deep: #264536;
+    --cream: #f8f6ef;
+    --paper: #fffdf8;
+    --muted: #788076;
+    --line: #e7e4da;
+    --pink: #efb4b1;
+    --orange: #e48c58;
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'DM Sans', Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; color: var(--ink); background: var(--cream); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  .page-width { width: min(1160px, calc(100% - 64px)); margin-inline: auto; }
+  .announcement { min-height: 34px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #fffdf8; background: var(--green-deep); font-size: 11px; letter-spacing: .035em; }
+  .announcement > span { color: #e9bd7a; font-size: 13px; }
+  .announcement a { margin-left: 5px; color: #e9d4a9; text-decoration: underline; text-underline-offset: 3px; }
+
+  .site-header { height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 28px; padding-inline: max(32px, calc((100% - 1260px) / 2)); background: var(--pink); }
+  .brand { display: inline-flex; align-items: center; gap: 9px; flex-shrink: 0; }
+  .brand-mark { width: 35px; height: 35px; display: grid; place-items: center; color: var(--green); }
+  .brand-mark svg { width: 100%; }
+  .brand-mark path { stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .brand-name { font-family: var(--serif); font-size: 18px; letter-spacing: -.055em; line-height: 1; }
+  .brand-name b { display: block; font-size: 15px; font-weight: 500; letter-spacing: .005em; }
+  .main-nav { display: flex; align-items: center; gap: 38px; margin-left: 45px; }
+  .main-nav a { color: #523e3d; font-size: 12px; transition: color .2s ease; }
+  .main-nav a:hover, .main-nav a.current { color: #894f4c; }
+  .main-nav a.current { font-weight: 700; }
+  .header-cta { padding: 12px 17px; border: 1px solid #d6a09e; border-radius: 999px; font-size: 11px; font-weight: 700; transition: background .2s, color .2s; }
+  .header-cta span { margin-left: 8px; color: var(--orange); }
+  .header-cta:hover { color: white; background: var(--green); }
+
+  .books-hero { position: relative; overflow: hidden; padding: 67px 0 63px; background: #e9eee5; }
+  .books-hero .page-width { position: relative; }
+  .eyebrow { color: #758174; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+  .eyebrow > span { margin-right: 7px; color: var(--orange); font-size: 14px; vertical-align: -1px; }
+  h1, h2, h3, p { margin-top: 0; }
+  .books-hero h1 { margin: 16px 0 12px; font-family: var(--serif); font-size: clamp(45px, 5vw, 65px); font-weight: 500; letter-spacing: -.065em; line-height: .99; }
+  .books-hero h1 em { color: #82927a; font-weight: 500; }
+  .books-hero p { margin-bottom: 20px; color: #6b746c; font-size: 13px; line-height: 1.7; }
+  .hero-link { display: inline-flex; align-items: center; gap: 13px; color: var(--green); font-size: 10px; font-weight: 700; }
+  .hero-link span { color: var(--orange); font-size: 15px; }
+  .hero-doodle { position: absolute; color: #d29a5e; }
+  .doodle-flower { right: 13%; top: 26px; font-size: 55px; }
+  .doodle-star { right: 4%; bottom: 4px; color: #c9775a; font-size: 31px; }
+
+  .catalog { padding-top: 52px; padding-bottom: 82px; }
+  .catalog-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 25px; }
+  .catalog-heading h2 { margin: 9px 0 0; font-family: var(--serif); font-size: 34px; font-weight: 500; letter-spacing: -.05em; }
+  .catalog-heading > p { margin: 0 0 5px; color: #83877d; font-size: 10px; }
+  .catalog-heading > p span { margin-left: 5px; color: var(--orange); }
+  .catalog-state { padding: 38px 16px; color: #747d72; text-align: center; font-size: 12px; }
+  .retry-button { display: block; margin: -20px auto 28px; padding: 9px 15px; border: 1px solid #cfd7cb; border-radius: 3px; color: var(--green); background: transparent; cursor: pointer; font-size: 10px; font-weight: 700; }
+  .retry-button:hover { color: #fffdf8; background: var(--green); }
+  .book-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px 20px; }
+  .book-grid[hidden] { display: none; }
+  .book-card { min-width: 0; overflow: hidden; border: 1px solid #ebe8de; border-radius: 5px; background: var(--paper); transition: transform .2s ease, box-shadow .2s ease; }
+  .book-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px #263d3210; }
+  .cover-wrap { position: relative; display: grid; place-items: center; min-height: 272px; padding: 15px; background: #f0eee6; }
+  .book-cover { width: 178px; max-width: 100%; aspect-ratio: 320 / 440; display: block; border-radius: 3px 6px 6px 3px; box-shadow: 6px 7px 12px #263d3220; object-fit: cover; transition: transform .3s ease; }
+  .cover-placeholder { width: 178px; max-width: 100%; aspect-ratio: 320 / 440; display: grid; place-items: center; padding: 20px; border-radius: 3px 6px 6px 3px; color: #49624f; background: linear-gradient(145deg, #dce8ce, #efdfc4 58%, #e8c9b8); box-shadow: 6px 7px 12px #263d3220; font-family: var(--serif); font-size: 19px; text-align: center; }
+  .book-card:hover .book-cover { transform: rotate(-1deg); }
+  .book-card:hover .cover-placeholder { transform: rotate(-1deg); }
+  .condition { position: absolute; top: 25px; left: 24px; padding: 6px 9px; border-radius: 999px; color: #42644c; background: #e0ead9; font-size: 8px; font-weight: 700; letter-spacing: .025em; }
+  .condition.very-good { color: #776044; background: #f1e5c9; }
+  .condition.good { color: #865c52; background: #f1dcd3; }
+  .sold-badge { position: absolute; top: 25px; right: 24px; padding: 6px 9px; border-radius: 999px; color: #865548; background: #f1dcd3; font-size: 8px; font-weight: 700; }
+  .cover-sparkle { position: absolute; right: 22px; bottom: 20px; color: #c89158; font-size: 18px; }
+  .book-details { padding: 15px 15px 14px; }
+  .book-heading { display: flex; align-items: start; justify-content: space-between; gap: 8px; }
+  .book-heading h3 { margin: 0; font-family: var(--serif); font-size: 17px; font-weight: 500; letter-spacing: -.025em; line-height: 1.2; }
+  .price { flex-shrink: 0; padding-top: 2px; color: var(--green); font-size: 12px; font-weight: 700; }
+  .author { margin: 5px 0 14px; color: #92958b; font-size: 10px; }
+  .book-bottom { display: flex; align-items: center; justify-content: space-between; gap: 7px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .condition-copy { color: #747d72; font-size: 9px; }
+  .condition-copy span { margin-right: 4px; color: #ce8b63; }
+  .buy-button { flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 11px; border: 0; border-radius: 3px; color: #fffdf8; background: var(--green); cursor: pointer; font-size: 9px; font-weight: 700; transition: background .2s ease; }
+  .buy-button:hover { background: var(--green-deep); }
+  .buy-button:disabled { color: #fffdf8; background: #8c9389; cursor: not-allowed; }
+  .buy-button span { font-size: 14px; font-weight: 400; }
+  .site-footer { padding: 31px 0 17px; border-top: 1px solid #e8e4d9; background: #f3f1e8; }
+  .footer-inner { min-height: 49px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+  .footer-brand .brand-mark { width: 29px; height: 29px; }
+  .footer-brand .brand-name { font-size: 15px; }
+  .footer-brand .brand-name b { font-size: 13px; }
+  .footer-handle, .back-home { color: #747d72; font-size: 10px; }
+  .back-home span { margin-left: 6px; color: var(--orange); font-size: 14px; }
+  .footer-bottom { display: flex; justify-content: space-between; gap: 15px; margin-top: 24px; padding-top: 15px; border-top: 1px solid #e4e1d7; color: #9a9b91; font-size: 9px; }
+
+  @media (max-width: 900px) {
+    .main-nav { gap: 20px; margin-left: 0; }
+    .book-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+    .cover-wrap { min-height: 250px; }
+  }
+
+  @media (max-width: 650px) {
+    .page-width { width: min(100% - 36px, 500px); }
+    .announcement { padding-inline: 10px; font-size: 9px; }
+    .site-header { height: 70px; padding-inline: 18px; }
+    .brand-mark { width: 30px; height: 30px; }
+    .brand-name { font-size: 16px; }
+    .brand-name b { font-size: 13px; }
+    .main-nav { display: none; }
+    .header-cta { padding: 10px 12px; font-size: 10px; }
+    .books-hero { padding: 50px 0 44px; }
+    .books-hero h1 { font-size: clamp(43px, 12vw, 58px); }
+    .books-hero p { max-width: 275px; font-size: 12px; }
+    .doodle-flower { top: 15px; right: 2%; font-size: 38px; }
+    .doodle-star { right: 0; bottom: 0; font-size: 22px; }
+    .catalog { padding-top: 39px; padding-bottom: 57px; }
+    .catalog-heading { align-items: start; flex-direction: column; gap: 8px; }
+    .catalog-heading h2 { font-size: 30px; }
+    .book-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px 11px; }
+    .cover-wrap { min-height: 205px; padding: 11px; }
+    .book-cover { width: 140px; }
+    .cover-placeholder { width: 140px; padding: 12px; font-size: 16px; }
+    .condition { top: 17px; left: 15px; padding: 5px 7px; font-size: 7px; }
+    .sold-badge { top: 17px; right: 15px; padding: 5px 7px; font-size: 7px; }
+    .cover-sparkle { right: 12px; bottom: 12px; font-size: 15px; }
+    .book-details { padding: 12px 10px 10px; }
+    .book-heading { gap: 4px; }
+    .book-heading h3 { font-size: 14px; }
+    .price { font-size: 11px; }
+    .author { margin-bottom: 11px; font-size: 9px; }
+    .book-bottom { align-items: start; flex-direction: column; gap: 9px; }
+    .buy-button { width: 100%; justify-content: center; }
+    .footer-inner { flex-wrap: wrap; }
+    .footer-handle { order: 3; width: 100%; }
+    .footer-bottom { font-size: 8px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+  }
+</style>
