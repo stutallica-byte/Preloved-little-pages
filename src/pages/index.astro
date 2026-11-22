@@ -49,6 +49,7 @@ const books = [
       name="description"
       content="Find your next favourite story at Preloved Little Pages: a cosy corner for pre-loved children's books and new little readers."
     />
+    <link rel="icon" type="image/webp" href="/preloved-little-pages-logo.webp" />
     <title>Preloved Little Pages — Stories worth sharing</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -65,13 +66,7 @@ const books = [
 
     <header class="site-header">
       <a class="brand" href="#top" aria-label="Preloved Little Pages home">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 42 42" fill="none">
-            <path d="M7 10.5c5.8-2.6 10.5-1.6 14 1.1v22c-3.5-2.7-8.2-3.7-14-1.1v-22Z" />
-            <path d="M35 10.5c-5.8-2.6-10.5-1.6-14 1.1v22c3.5-2.7 8.2-3.7 14-1.1v-22Z" />
-            <path d="M11 16c3.1-.7 5.7-.3 8 1.1M11 21c3.1-.7 5.7-.3 8 1.1M31 16c-3.1-.7-5.7-.3-8 1.1M31 21c-3.1-.7-5.7-.3-8 1.1" />
-          </svg>
-        </span>
+        <span class="brand-mark" aria-hidden="true"><img src="/preloved-little-pages-logo.webp" alt="" width="56" height="56" decoding="async" /></span>
         <span class="brand-name">Preloved <b>Little Pages</b></span>
       </a>
 
@@ -92,6 +87,7 @@ const books = [
     <main id="top">
       <section class="hero page-width" aria-labelledby="hero-title">
         <div class="hero-copy">
+          <img class="hero-brand-logo" src="/preloved-little-pages-logo.webp" alt="Preloved Little Pages illustrated logo" width="148" height="148" decoding="async" />
           <div class="eyebrow"><span class="eyebrow-star">✳</span> Welcome to a little world of stories</div>
           <h1 id="hero-title">Little books.<br />Big <em>adventures.</em></h1>
           <p>
@@ -275,13 +271,7 @@ const books = [
     <footer class="site-footer">
       <div class="page-width footer-inner">
         <a class="brand footer-brand" href="#top">
-          <span class="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 42 42" fill="none">
-              <path d="M7 10.5c5.8-2.6 10.5-1.6 14 1.1v22c-3.5-2.7-8.2-3.7-14-1.1v-22Z" />
-              <path d="M35 10.5c-5.8-2.6-10.5-1.6-14 1.1v22c3.5-2.7 8.2-3.7 14-1.1v-22Z" />
-              <path d="M11 16c3.1-.7 5.7-.3 8 1.1M11 21c3.1-.7 5.7-.3 8 1.1M31 16c-3.1-.7-5.7-.3-8 1.1M31 21c-3.1-.7-5.7-.3-8 1.1" />
-            </svg>
-          </span>
+          <span class="brand-mark" aria-hidden="true"><img src="/preloved-little-pages-logo.webp" alt="" width="56" height="56" decoding="async" /></span>
           <span class="brand-name">Preloved <b>Little Pages</b></span>
         </a>
         <p>Small pages. Big-hearted stories. <span aria-hidden="true">♥</span></p>
@@ -411,7 +401,8 @@ const books = [
   }
 
   .brand { display: inline-flex; align-items: center; gap: 9px; flex-shrink: 0; }
-  .brand-mark { width: 35px; height: 35px; display: grid; place-items: center; color: var(--green); }
+  .brand-mark { width: 48px; height: 48px; display: grid; place-items: center; color: var(--green);  }
+  .brand-mark img { width: 100%; height: 100%; display: block; object-fit: contain; border-radius: 50%; }
   .brand-mark svg { width: 100%; }
   .brand-mark path { stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .brand-name { font-family: var(--serif); font-size: 18px; letter-spacing: -.055em; line-height: 1; }
@@ -436,6 +427,7 @@ const books = [
     gap: 50px;
   }
 
+  .hero-brand-logo { display: block; width: 112px; height: 112px; object-fit: contain; border-radius: 50%; margin-bottom: 15px; }
   .hero-copy { position: relative; z-index: 1; max-width: 490px; padding-bottom: 5px; }
   .eyebrow { color: #758174; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
   .eyebrow-star { margin-right: 7px; color: var(--orange); font-size: 14px; vertical-align: -1px; }
