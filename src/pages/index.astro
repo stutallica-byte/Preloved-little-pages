@@ -85,9 +85,11 @@ const books = [
     </header>
 
     <main id="top">
+      <div class="page-width homepage-logo-banner">
+        <img src="/preloved-homepage-wide-logo.webp" alt="Preloved Little Pages — illustrated books and lettering" width="1800" height="600" decoding="async" fetchpriority="high" />
+      </div>
       <section class="hero page-width" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <img class="hero-brand-logo" src="/preloved-little-pages-logo.webp" alt="Preloved Little Pages illustrated logo" width="148" height="148" decoding="async" />
           <div class="eyebrow"><span class="eyebrow-star">✳</span> Welcome to a little world of stories</div>
           <h1 id="hero-title">Little books.<br />Big <em>adventures.</em></h1>
           <p>
@@ -427,7 +429,9 @@ const books = [
     gap: 50px;
   }
 
-  .hero-brand-logo { display: block; width: 112px; height: 112px; object-fit: contain; border-radius: 50%; margin-bottom: 15px; }
+  .homepage-logo-banner { margin-top: 36px; margin-bottom: -28px; }
+  .homepage-logo-banner img { display: block; width: 100%; height: auto; object-fit: contain; }
+  .hero-brand-logo { display: none; }
   .hero-copy { position: relative; z-index: 1; max-width: 490px; padding-bottom: 5px; }
   .eyebrow { color: #758174; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
   .eyebrow-star { margin-right: 7px; color: var(--orange); font-size: 14px; vertical-align: -1px; }
@@ -613,7 +617,8 @@ const books = [
     .basket-link { gap: 4px; padding: 8px; font-size: 9px; }
     .header-cta { padding: 8px 9px; font-size: 9px; }
     .header-cta span { margin-left: 4px; }
-    .hero { min-height: auto; grid-template-columns: 1fr; gap: 18px; padding: 47px 0 83px; }
+    .hero { min-height: auto; grid-template-columns: 1fr; gap: 18px; padding: 30px 0 83px; }
+    .homepage-logo-banner { margin-top: 26px; margin-bottom: 0; }
     .hero-copy { max-width: none; }
     .hero h1 { margin-top: 18px; font-size: clamp(52px, 13vw, 68px); }
     .hero-copy > p { max-width: 350px; font-size: 13px; }
