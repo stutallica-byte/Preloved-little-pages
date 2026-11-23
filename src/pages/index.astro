@@ -59,16 +59,14 @@ const books = [
     />
   </head>
   <body>
-    <div class="announcement">
-      <span aria-hidden="true">✳</span> Little stories, lighter footprints.
-      <a href="#our-story">Find out why <span aria-hidden="true">→</span></a>
-    </div>
-
     <header class="site-header">
-      <a class="brand" href="#top" aria-label="Preloved Little Pages home">
-        <span class="brand-mark" aria-hidden="true"><img src="/preloved-little-pages-logo.webp" alt="" width="56" height="56" decoding="async" /></span>
-        <span class="brand-name">Preloved <b>Little Pages</b></span>
-      </a>
+      <div class="header-brand-group">
+        <a class="brand" href="#our-story" aria-label="Preloved Little Pages — find out why">
+          <span class="brand-mark" aria-hidden="true"><img src="/preloved-little-pages-logo.webp" alt="" width="56" height="56" decoding="async" /></span>
+          <span class="brand-name">Preloved <b>Little Pages</b></span>
+        </a>
+        <a class="brand-story-link" href="#our-story">Find out why <span aria-hidden="true">→</span></a>
+      </div>
 
       <nav class="main-nav" aria-label="Main navigation">
         <a href="/books/">Shop books</a>
@@ -373,21 +371,6 @@ const books = [
   .page-width { width: min(1160px, calc(100% - 64px)); margin-inline: auto; }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
-  .announcement {
-    min-height: 34px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    color: #fffdf8;
-    background: var(--green-deep);
-    font-size: 11px;
-    letter-spacing: .035em;
-  }
-
-  .announcement > span { color: #e9bd7a; font-size: 13px; }
-  .announcement a { margin-left: 5px; color: #e9d4a9; text-decoration: underline; text-underline-offset: 3px; }
-
   .site-header {
     height: 82px;
     width: 100%;
@@ -399,6 +382,9 @@ const books = [
     background: #efb4b1;
   }
 
+  .header-brand-group { display: flex; flex-direction: column; align-items: flex-start; flex-shrink: 0; gap: 2px; }
+  .brand-story-link { padding-left: 57px; color: #523e3d; font-size: 10px; text-decoration: underline; text-underline-offset: 2px; }
+  .brand-story-link:hover { color: var(--green); }
   .brand { display: inline-flex; align-items: center; gap: 9px; flex-shrink: 0; }
   .brand-mark { width: 48px; height: 48px; display: grid; place-items: center; color: var(--green);  }
   .brand-mark img { width: 100%; height: 100%; display: block; object-fit: contain; border-radius: 50%; }
@@ -604,9 +590,10 @@ const books = [
 
   @media (max-width: 650px) {
     .page-width { width: min(100% - 36px, 500px); }
-    .announcement { padding-inline: 10px; font-size: 9px; }
     .site-header { height: 70px; gap: 8px; padding-inline: 12px; }
     .brand { gap: 5px; }
+    .header-brand-group { gap: 2px; }
+    .brand-story-link { padding-left: 31px; font-size: 9px; }
     .brand-mark { width: 26px; height: 26px; }
     .brand-name { font-size: 14px; }
     .brand-name b { font-size: 12px; }
