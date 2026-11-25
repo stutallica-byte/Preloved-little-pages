@@ -149,6 +149,20 @@
               </div>
               <button class="quiet-button" id="refresh-books" type="button">Refresh <span aria-hidden="true">↻</span></button>
             </div>
+            <div class="stock-counters" aria-label="Stock totals" aria-live="polite">
+              <div><strong id="stock-total">—</strong><span>Total books</span></div>
+              <div><strong id="stock-available">—</strong><span>Available</span></div>
+              <div><strong id="stock-sold">—</strong><span>Sold</span></div>
+            </div>
+            <div class="inventory-tools">
+              <label for="inventory-search">Search books</label>
+              <input id="inventory-search" type="search" placeholder="Search by title or author" />
+              <div class="stock-filters" role="group" aria-label="Filter by availability">
+                <button type="button" data-stock-filter="all" aria-pressed="true">All books</button>
+                <button type="button" data-stock-filter="available" aria-pressed="false">Available</button>
+                <button type="button" data-stock-filter="sold" aria-pressed="false">Sold</button>
+              </div>
+            </div>
             <div class="inventory-state" id="inventory-state" role="status" aria-live="polite">Loading your books...</div>
             <div class="inventory-list" id="inventory-list" aria-busy="true"></div>
           </section>
@@ -412,6 +426,7 @@
   }
 
   function showLogin() {
+    resetInventory();
     resetIsbn();
     if (loginPanel) loginPanel.hidden = false;
     if (dashboardPanel) dashboardPanel.hidden = true;
@@ -502,21 +517,81 @@
     }
   }
 
+  let inventoryRows: BookRow[] = [];
+  let inventoryReady = false;
+  let inventoryRequest = 0;
+  let stockFilter = 'all';
+  const inventorySearch = document.querySelector<HTMLInputElement>('#inventory-search');
+  const stockFilters = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-stock-filter]'));
+
+  function updateStockCounters() {
+    const sold = inventoryRows.filter(book => book.sold === true).length;
+    for (const [id, count] of [['stock-total', inventoryRows.length], ['stock-available', inventoryRows.length - sold], ['stock-sold', sold]] as const) {
+      const element = document.getElementById(id);
+      if (element) element.textContent = inventoryReady ? String(count) : '—';
+    }
+  }
+
+  function renderFilteredInventory() {
+    if (!inventoryReady || !inventoryList || !inventoryState) return;
+    const query = (inventorySearch?.value ?? '').trim().toLowerCase();
+    const matching = inventoryRows.filter(book => {
+      const sold = book.sold === true;
+      if (stockFilter === 'available' && sold || stockFilter === 'sold' && !sold) return false;
+      const title = getString(book, ['title', 'name']) ?? '';
+      const author = getString(book, ['author', 'authors']) ?? '';
+      return !query || (title + ' ' + author).toLowerCase().includes(query);
+    });
+    inventoryList.replaceChildren(...matching.map(renderBookRow));
+    inventoryState.hidden = matching.length > 0;
+    inventoryState.textContent = inventoryRows.length === 0 ? 'No books yet. Add your first book.' : 'No books match your search or filter.';
+  }
+
+  function resetInventory() {
+    inventoryRequest++;
+    inventoryReady = false;
+    inventoryRows = [];
+    stockFilter = 'all';
+    if (inventorySearch) inventorySearch.value = '';
+    for (const button of stockFilters) button.setAttribute('aria-pressed', String(button.dataset.stockFilter === 'all'));
+    inventoryList?.replaceChildren();
+    updateStockCounters();
+  }
+
+  inventorySearch?.addEventListener('input', renderFilteredInventory);
+  for (const button of stockFilters) {
+    button.addEventListener('click', () => {
+      stockFilter = button.dataset.stockFilter ?? 'all';
+      for (const item of stockFilters) item.setAttribute('aria-pressed', String(item === button));
+      renderFilteredInventory();
+    });
+  }
+
   async function loadBooks() {
     if (!supabase || !inventoryList || !inventoryState) return;
 
+    const request = ++inventoryRequest;
+    inventoryReady = false;
+    updateStockCounters();
     inventoryList.replaceChildren();
     inventoryList.setAttribute('aria-busy', 'true');
     inventoryState.hidden = false;
     inventoryState.textContent = 'Loading your books...';
 
     try {
-      const { data, error } = await supabase
-        .from('books')
-        .select('id,created_at,title,author,price,condition,description,image_url,sold')
-        .order('title', { ascending: true });
-      if (error) throw error;
-      if (!Array.isArray(data)) throw new Error('Supabase returned an invalid books response.');
+      const data: unknown[] = [];
+      const pageSize = 500;
+      for (let offset = 0; ; offset += pageSize) {
+        const { data: page, error } = await supabase.from('books')
+          .select('id,created_at,title,author,price,condition,description,image_url,sold')
+          .order('title', { ascending: true }).order('id', { ascending: true })
+          .range(offset, offset + pageSize - 1);
+        if (request !== inventoryRequest) return;
+        if (error) throw error;
+        if (!Array.isArray(page)) throw new Error('Supabase returned an invalid books response.');
+        data.push(...page);
+        if (page.length < pageSize) break;
+      }
 
       const rows = data.filter(
         (row): row is BookRow =>
@@ -526,18 +601,19 @@
           (typeof row.id === 'string' || typeof row.id === 'number'),
       );
 
-      if (rows.length === 0) {
-        inventoryState.textContent = 'No books yet. Add the first one using the form.';
-        return;
-      }
-
-      inventoryState.hidden = true;
-      inventoryList.append(...rows.map(renderBookRow));
+      inventoryRows = rows;
+      inventoryReady = true;
+      updateStockCounters();
+      renderFilteredInventory();
     } catch (error) {
+      if (request !== inventoryRequest) return;
+      inventoryRows = [];
+      inventoryReady = false;
+      updateStockCounters();
       console.error('Unable to load admin book inventory:', error);
       inventoryState.textContent = 'Could not load your books. Check the database setup and try again.';
     } finally {
-      inventoryList.setAttribute('aria-busy', 'false');
+      if (request === inventoryRequest) inventoryList.setAttribute('aria-busy', 'false');
     }
   }
 
@@ -607,14 +683,21 @@
     remove.textContent = 'Delete';
     remove.addEventListener('click', () => deleteBook(book));
 
-    actions.append(edit, toggleSold, remove);
+    const duplicate = document.createElement('button');
+    duplicate.className = 'small-button';
+    duplicate.type = 'button';
+    duplicate.textContent = 'Duplicate';
+    duplicate.addEventListener('click', () => duplicateBook(book));
+    actions.append(edit, duplicate, toggleSold, remove);
     row.append(details, status, actions);
     return row;
   }
 
   function beginEdit(book: BookRow) {
+    if (savingBook) return;
     if (!bookId || !bookTitle || !bookAuthor || !bookDescription || !bookPrice || !bookCondition || !currentCover || !bookSold || !saveButton || !cancelEditButton) return;
 
+    if (bookForm) delete bookForm.dataset.duplicateDraft;
     if (bookCover) bookCover.value = '';
     showSelectedCover();
     resetIsbn();
@@ -643,6 +726,32 @@
     cancelEditButton.hidden = false;
     if (saveAnotherButton) saveAnotherButton.hidden = true;
     selectAdminTab("add-books-tab");
+    bookTitle.focus();
+  }
+
+  function duplicateBook(book: BookRow) {
+    if (savingBook || !bookForm || !bookId || !bookTitle || !bookAuthor || !bookDescription || !bookPrice || !bookCondition || !bookSold || !currentCover) return;
+    if (bookForm.dataset.duplicateDraft === 'true' || bookId.value || bookTitle.value.trim() || bookAuthor.value.trim() || bookDescription.value.trim() || bookPrice.value || bookCondition.value || bookCover?.files?.length) {
+      if (!window.confirm('Replace the current unsaved book form with a copy of this listing?')) return;
+    }
+    resetBookForm();
+    bookTitle.value = getString(book, ['title', 'name']) ?? '';
+    bookAuthor.value = getString(book, ['author', 'authors']) ?? '';
+    bookDescription.value = getString(book, ['description']) ?? '';
+    if (optionalDetails) optionalDetails.open = Boolean(bookDescription.value);
+    bookPrice.value = book.price == null ? '' : String(book.price).replace(/[^\d.]/g, '');
+    const condition = getString(book, ['condition']) ?? '';
+    if (condition && !Array.from(bookCondition.options).some(option => option.value === condition)) {
+      bookCondition.add(new Option(condition, condition));
+    }
+    bookCondition.value = condition;
+    bookSold.checked = false;
+    syncQuickOptions();
+    bookForm.dataset.duplicateDraft = 'true';
+    currentCover.textContent = 'New listing draft. Choose your own photo for this copy before saving.';
+    currentCover.hidden = false;
+    setNotice(dashboardNotice, 'Listing copied. Check the price and condition and add a new cover photo.', 'success');
+    selectAdminTab('add-books-tab');
     bookTitle.focus();
   }
 
@@ -683,6 +792,7 @@
   function resetBookForm() {
     if (!bookForm || !bookId || !saveButton || !cancelEditButton || !currentCover) return;
     bookForm.reset();
+    delete bookForm.dataset.duplicateDraft;
     resetIsbn();
     syncQuickOptions();
     showSelectedCover();
@@ -787,10 +897,12 @@
     }
 
     const editingId = bookId.value;
-    const existing = editingId
-      ? Array.from(inventoryList?.querySelectorAll<HTMLElement>('[data-book-id]') ?? []).find((item) => item.dataset.bookId === editingId)
-      : undefined;
-    const previousCover = existing?.dataset.coverUrl ?? '';
+    const existing = editingId ? inventoryRows.find(book => String(book.id) === editingId) : undefined;
+    if (editingId && (!inventoryReady || !existing)) {
+      setNotice(dashboardNotice, 'Refresh the inventory and reopen the book before saving changes.', 'error');
+      return;
+    }
+    const previousCover = existing ? getImageUrl(existing) ?? '' : '';
     let uploadedPath: string | undefined;
     let coverUrl = previousCover;
 
@@ -1097,4 +1209,14 @@
   #isbn-video { display: block; width: 100%; max-height: 220px; object-fit: contain; margin-top: 8px; background: #263d32; border-radius: 5px; }
   #isbn-status { margin: 8px 0 0; font-size: 12px; color: var(--green); }
   #isbn-status:empty { display: none; }
+  .stock-counters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 18px; }
+  .stock-counters > div { display: grid; justify-items: center; gap: 4px; padding: 14px 5px; border: 1px solid var(--line); border-radius: 5px; background: var(--cream); }
+  .stock-counters strong { font-family: var(--serif); font-size: 27px; color: var(--green); }
+  .stock-counters span { font-size: 11px; color: var(--green); text-align: center; }
+  .inventory-tools { margin-bottom: 14px; }
+  .inventory-tools label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+  .stock-filters { display: flex; gap: 6px; margin-top: 10px; }
+  .stock-filters button { flex: 1; min-height: 44px; border: 1px solid #cfd7cb; border-radius: 5px; background: var(--paper); color: var(--green); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+  .stock-filters button[aria-pressed="true"] { background: var(--green); color: #fffdf8; border-color: var(--green); }
+  @media (max-width: 650px) { #inventory-search { font-size: 16px; } }
 </style>
