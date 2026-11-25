@@ -937,12 +937,11 @@
         price: parsedPrice,
         condition: bookCondition.value,
         image_url: coverUrl || null,
-        sold: editingId ? existing?.sold === true : false,
       };
 
       const result = editingId
         ? await supabase.from('books').update(record).eq('id', editingId)
-        : await supabase.from('books').insert(record);
+        : await supabase.from('books').insert({ ...record, sold: false });
       if (result.error) throw result.error;
 
       const previousImagePath = getBucketPath(previousCover);
