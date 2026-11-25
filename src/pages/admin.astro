@@ -128,10 +128,7 @@
                 <label for="book-description">Description</label>
                 <textarea id="book-description" name="description" rows="3" maxlength="2000" placeholder="Any additional details"></textarea>
               </details>
-              <label class="checkbox-row" for="book-sold">
-                <input id="book-sold" name="sold" type="checkbox" />
-                <span>Mark this book as sold</span>
-              </label>
+              <input id="book-sold" name="sold" type="checkbox" hidden />
 
               <div class="form-actions">
                 <button class="primary-button" id="save-book" type="submit">Add book <span aria-hidden="true">→</span></button>
@@ -940,7 +937,7 @@
         price: parsedPrice,
         condition: bookCondition.value,
         image_url: coverUrl || null,
-        sold: bookSold.checked,
+        sold: editingId ? existing?.sold === true : false,
       };
 
       const result = editingId
