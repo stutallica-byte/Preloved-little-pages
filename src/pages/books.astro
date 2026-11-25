@@ -305,7 +305,7 @@
     try {
       const { data, error } = await getSupabaseClient()
         .from('books')
-        .select('*')
+        .select('id,title,author,price,condition,description,image_url,sold')
         .order('title', { ascending: true });
 
       if (error) throw error;
