@@ -91,6 +91,10 @@
                 <div>
                   <label for="book-price">Price (£)</label>
                   <input id="book-price" name="price" type="number" min="0" step="0.01" required />
+                  <div class="quick-options" role="group" aria-label="Quick price selection">
+                    {['1','2','3','4'].map((price) => <button type="button" data-quick-price={price} aria-pressed="false">£{price}</button>)}
+                    <button type="button" data-quick-price="other">Other</button>
+                  </div>
                 </div>
                 <div>
                   <label for="book-condition">Condition</label>
@@ -100,6 +104,9 @@
                     <option value="Very good">Very good</option>
                     <option value="Good">Good</option>
                   </select>
+                  <div class="quick-options" role="group" aria-label="Quick condition selection">
+                    {['Excellent','Very good','Good'].map((condition) => <button type="button" data-quick-condition={condition} aria-pressed="false">{condition}</button>)}
+                  </div>
                 </div>
               </div>
 
@@ -498,6 +505,7 @@
       bookCondition.append(option);
     }
     bookCondition.value = condition;
+    syncQuickOptions();
 
     const coverUrl = getImageUrl(book);
     currentCover.textContent = coverUrl ? 'A cover is currently saved. Choose a new image to replace it.' : 'No cover image saved.';
@@ -509,9 +517,44 @@
     bookTitle.focus();
   }
 
+  const quickPrices = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-quick-price]'));
+  const quickConditions = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-quick-condition]'));
+
+  function syncQuickOptions() {
+    for (const button of quickPrices) {
+      if (button.dataset.quickPrice === 'other') continue;
+      button.setAttribute('aria-pressed', String(Boolean(bookPrice?.value) && Number(bookPrice?.value) === Number(button.dataset.quickPrice)));
+    }
+    for (const button of quickConditions) {
+      button.setAttribute('aria-pressed', String(bookCondition?.value === button.dataset.quickCondition));
+    }
+  }
+
+  for (const button of quickPrices) {
+    button.addEventListener('click', () => {
+      if (!bookPrice) return;
+      if (button.dataset.quickPrice === 'other') {
+        bookPrice.focus();
+        return;
+      }
+      bookPrice.value = Number(button.dataset.quickPrice).toFixed(2);
+      syncQuickOptions();
+    });
+  }
+  for (const button of quickConditions) {
+    button.addEventListener('click', () => {
+      if (!bookCondition) return;
+      bookCondition.value = button.dataset.quickCondition ?? '';
+      syncQuickOptions();
+    });
+  }
+  bookPrice?.addEventListener('input', syncQuickOptions);
+  bookCondition?.addEventListener('change', syncQuickOptions);
+
   function resetBookForm() {
     if (!bookForm || !bookId || !saveButton || !cancelEditButton || !currentCover) return;
     bookForm.reset();
+    syncQuickOptions();
     showSelectedCover();
     if (optionalDetails) optionalDetails.open = false;
     bookId.value = '';
@@ -857,4 +900,11 @@
     #book-form > label, #book-form .form-row label { font-size: 12px; }
     .form-actions .primary-button { font-size: 14px; }
   }
+  .quick-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .quick-options button { flex: 1 0 auto; min-height: 44px; padding: 6px 10px; border: 1px solid #cfd7cb; border-radius: 5px; background: var(--paper); color: var(--green); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .quick-options button[data-quick-condition="Excellent"] { background: #e0ead9; }
+  .quick-options button[data-quick-condition="Very good"] { background: #f1e5c9; }
+  .quick-options button[data-quick-condition="Good"] { background: #f1dcd3; }
+  .quick-options button[aria-pressed="true"] { color: #fffdf8; background: var(--green); border-color: var(--green); }
+  .quick-options button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 </style>
