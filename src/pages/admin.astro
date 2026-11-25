@@ -70,14 +70,22 @@
             </div>
             <form id="book-form">
               <input id="book-id" name="id" type="hidden" />
-              <label for="book-title">Title</label>
-              <input id="book-title" name="title" type="text" maxlength="200" required />
+              <div class="photo-picker">
+                <label for="book-cover" class="photo-label">
+                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 6h4l2-3h4l2 3h4a2 2 0 0 1 2 2v11H2V8a2 2 0 0 1 2-2Z"/><circle cx="12" cy="12" r="4"/></svg>
+                  <strong>Take photo or choose from library</strong>
+                  <span>Book cover · JPEG, PNG, WebP or AVIF · up to 5 MB</span>
+                  <img id="cover-preview" alt="Selected book cover" hidden />
+                </label>
+                <input id="book-cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp,image/avif" />
+                <button class="quiet-button" type="button" id="clear-cover" hidden>Remove selected photo</button>
+                <p class="current-cover" id="current-cover" hidden></p>
+              </div>
+              <label for="book-title">Book title</label>
+              <input id="book-title" name="title" type="text" maxlength="200" placeholder="Enter book title" required />
 
               <label for="book-author">Author</label>
-              <input id="book-author" name="author" type="text" maxlength="200" required />
-
-              <label for="book-description">Description</label>
-              <textarea id="book-description" name="description" rows="3" maxlength="2000"></textarea>
+              <input id="book-author" name="author" type="text" maxlength="200" placeholder="Enter author" required />
 
               <div class="form-row">
                 <div>
@@ -95,10 +103,13 @@
                 </div>
               </div>
 
-              <label for="book-cover">Cover image <span class="label-note">JPEG, PNG, WebP or AVIF · up to 5 MB</span></label>
-              <input id="book-cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp,image/avif" />
-              <p class="current-cover" id="current-cover" hidden></p>
 
+
+              <details class="optional-details" id="optional-details">
+                <summary>Additional details (optional)</summary>
+                <label for="book-description">Description</label>
+                <textarea id="book-description" name="description" rows="3" maxlength="2000" placeholder="Any additional details"></textarea>
+              </details>
               <label class="checkbox-row" for="book-sold">
                 <input id="book-sold" name="sold" type="checkbox" />
                 <span>Mark this book as sold</span>
@@ -157,6 +168,26 @@
   const bookPrice = document.querySelector<HTMLInputElement>('#book-price');
   const bookCondition = document.querySelector<HTMLSelectElement>('#book-condition');
   const bookCover = document.querySelector<HTMLInputElement>('#book-cover');
+  const coverPreview = document.querySelector<HTMLImageElement>("#cover-preview");
+  const clearCover = document.querySelector<HTMLButtonElement>("#clear-cover");
+  const optionalDetails = document.querySelector<HTMLDetailsElement>("#optional-details");
+  let previewUrl: string | undefined;
+  function showSelectedCover() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = undefined;
+    const file = bookCover?.files?.[0];
+    if (file && coverPreview) {
+      previewUrl = URL.createObjectURL(file);
+      coverPreview.src = previewUrl;
+      coverPreview.hidden = false;
+    } else if (coverPreview) {
+      coverPreview.removeAttribute("src");
+      coverPreview.hidden = true;
+    }
+    if (clearCover) clearCover.hidden = !file;
+  }
+  bookCover?.addEventListener("change", showSelectedCover);
+  clearCover?.addEventListener("click", () => { if (bookCover) bookCover.value = ""; showSelectedCover(); });
   const currentCover = document.querySelector<HTMLParagraphElement>('#current-cover');
   const bookSold = document.querySelector<HTMLInputElement>('#book-sold');
   const saveButton = document.querySelector<HTMLButtonElement>('#save-book');
@@ -450,10 +481,13 @@
   function beginEdit(book: BookRow) {
     if (!bookId || !bookTitle || !bookAuthor || !bookDescription || !bookPrice || !bookCondition || !currentCover || !bookSold || !saveButton || !cancelEditButton) return;
 
+    if (bookCover) bookCover.value = '';
+    showSelectedCover();
     bookId.value = String(book.id);
     bookTitle.value = getString(book, ['title', 'name']) ?? '';
     bookAuthor.value = getString(book, ['author', 'authors']) ?? '';
     bookDescription.value = getString(book, ['description']) ?? '';
+    if (optionalDetails) optionalDetails.open = Boolean(bookDescription.value);
     bookPrice.value = book.price == null ? '' : String(book.price).replace(/[^\d.]/g, '');
 
     const condition = getString(book, ['condition']) ?? '';
@@ -478,6 +512,8 @@
   function resetBookForm() {
     if (!bookForm || !bookId || !saveButton || !cancelEditButton || !currentCover) return;
     bookForm.reset();
+    showSelectedCover();
+    if (optionalDetails) optionalDetails.open = false;
     bookId.value = '';
     currentCover.textContent = '';
     currentCover.hidden = true;
@@ -806,5 +842,19 @@
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+  }
+  .photo-picker { position: relative; margin-bottom: 18px; }
+  .photo-label { display: grid; justify-items: center; gap: 8px; padding: 20px 12px; border: 1px dashed #aabca5; border-radius: 6px; background: #f8f6ef; color: var(--green); cursor: pointer; text-align: center; font-size: 14px; }
+  .photo-label span { font-size: 10px; color: #687368; }
+  .photo-picker input[type="file"] { margin-top: 8px; }
+  #cover-preview { width: auto; max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 4px; }
+  #clear-cover { margin-top: 8px; }
+  .optional-details { margin-top: 16px; color: var(--green); font-size: 12px; }
+  .optional-details summary { cursor: pointer; font-weight: 700; padding: 8px 0; }
+  .optional-details label { display: block; margin: 8px 0 6px; font-size: 11px; }
+  @media (max-width: 650px) {
+    #book-form input:not([type="checkbox"]):not([type="file"]), #book-form select, #book-form textarea { font-size: 16px; }
+    #book-form > label, #book-form .form-row label { font-size: 12px; }
+    .form-actions .primary-button { font-size: 14px; }
   }
 </style>
