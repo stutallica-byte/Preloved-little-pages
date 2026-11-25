@@ -70,6 +70,17 @@
             </div>
             <form id="book-form">
               <input id="book-id" name="id" type="hidden" />
+              <div class="isbn-picker">
+                <label for="book-isbn">ISBN (optional)</label>
+                <div class="isbn-row">
+                  <input id="book-isbn" type="text" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="ISBN barcode number" />
+                  <button type="button" class="quiet-button" id="lookup-isbn">Find book</button>
+                </div>
+                <button type="button" class="quiet-button" id="scan-isbn">Scan barcode</button>
+                <video id="isbn-video" playsinline muted hidden></video>
+                <button type="button" class="quiet-button" id="stop-scan" hidden>Stop camera</button>
+                <p id="isbn-status" role="status" aria-live="polite"></p>
+              </div>
               <div class="photo-picker">
                 <label for="book-cover" class="photo-label">
                   <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 6h4l2-3h4l2 3h4a2 2 0 0 1 2 2v11H2V8a2 2 0 0 1 2-2Z"/><circle cx="12" cy="12" r="4"/></svg>
@@ -266,7 +277,119 @@
 
   const adminTabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.admin-tabs [role="tab"]'));
 
+  const isbnInput = document.querySelector<HTMLInputElement>('#book-isbn');
+  const isbnLookup = document.querySelector<HTMLButtonElement>('#lookup-isbn');
+  const isbnScan = document.querySelector<HTMLButtonElement>('#scan-isbn');
+  const isbnStop = document.querySelector<HTMLButtonElement>('#stop-scan');
+  const isbnVideo = document.querySelector<HTMLVideoElement>('#isbn-video');
+  const isbnStatus = document.querySelector<HTMLParagraphElement>('#isbn-status');
+  let isbnRequest = 0;
+  let cameraSession = 0;
+  let cameraStream: MediaStream | undefined;
+  let scanTimer: number | undefined;
+
+  function setIsbnStatus(message: string) { if (isbnStatus) isbnStatus.textContent = message; }
+  function normaliseIsbn(value: string) {
+    const isbn = value.replace(/[\s-]/g, '').toUpperCase();
+    if (/^97[89]\d{10}$/.test(isbn)) {
+      const sum = [...isbn].reduce((n, digit, i) => n + Number(digit) * (i % 2 ? 3 : 1), 0);
+      return sum % 10 === 0 ? isbn : '';
+    }
+    if (/^\d{9}[\dX]$/.test(isbn)) {
+      const sum = [...isbn].reduce((n, digit, i) => n + (digit === 'X' ? 10 : Number(digit)) * (10 - i), 0);
+      return sum % 11 === 0 ? isbn : '';
+    }
+    return '';
+  }
+
+  function stopIsbnCamera() {
+    cameraSession++;
+    if (scanTimer !== undefined) window.clearTimeout(scanTimer);
+    cameraStream?.getTracks().forEach(track => track.stop());
+    cameraStream = undefined;
+    if (isbnVideo) { isbnVideo.srcObject = null; isbnVideo.hidden = true; }
+    if (isbnStop) isbnStop.hidden = true;
+    if (isbnScan) isbnScan.disabled = false;
+  }
+
+  function resetIsbn() {
+    isbnRequest++;
+    stopIsbnCamera();
+    if (isbnInput) isbnInput.value = '';
+    if (isbnLookup) isbnLookup.disabled = false;
+    setIsbnStatus('');
+  }
+
+  async function findIsbn() {
+    if (!isbnInput || !isbnLookup || savingBook) return;
+    const isbn = normaliseIsbn(isbnInput.value);
+    if (!isbn) { setIsbnStatus('Enter a valid 10- or 13-digit ISBN.'); return; }
+    const request = ++isbnRequest;
+    isbnLookup.disabled = true;
+    setIsbnStatus('Looking for book details…');
+    try {
+      const response = await fetch('https://openlibrary.org/api/books?bibkeys=ISBN:' + encodeURIComponent(isbn) + '&format=json&jscmd=data', { signal: AbortSignal.timeout(12000) });
+      if (!response.ok) throw new Error('Lookup failed');
+      const result = await response.json();
+      if (request !== isbnRequest || savingBook) return;
+      const book = result['ISBN:' + isbn];
+      if (!book || typeof book.title !== 'string') { setIsbnStatus('No match found. You can enter the details manually.'); return; }
+      const authors = Array.isArray(book.authors) ? book.authors.map((author: {name?: string}) => author.name).filter(Boolean).join(', ') : '';
+      if (bookTitle && !bookTitle.value.trim()) bookTitle.value = book.title.slice(0, 200);
+      if (bookAuthor && !bookAuthor.value.trim()) bookAuthor.value = authors.slice(0, 200);
+      setIsbnStatus('Book found: ' + book.title + '. Check the title and author before saving. Existing entries are kept.');
+    } catch {
+      if (request === isbnRequest) setIsbnStatus('Lookup unavailable. Please enter the book details manually.');
+    } finally {
+      if (request === isbnRequest) isbnLookup.disabled = false;
+    }
+  }
+
+  async function scanIsbn() {
+    if (!isbnVideo || !isbnInput || !isbnScan || savingBook) return;
+    const Detector = (window as unknown as { BarcodeDetector?: new (options: {formats: string[]}) => { detect(video: HTMLVideoElement): Promise<Array<{rawValue: string}>> } }).BarcodeDetector;
+    if (!Detector || !navigator.mediaDevices?.getUserMedia) {
+      setIsbnStatus('Camera barcode scanning is unavailable in this browser. Enter the ISBN printed below the barcode.');
+      isbnInput.focus();
+      return;
+    }
+    stopIsbnCamera();
+    const session = cameraSession;
+    isbnScan.disabled = true;
+    try {
+      const detector = new Detector({formats: ['ean_13']});
+      const stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}}, audio: false});
+      if (session !== cameraSession) { stream.getTracks().forEach(track => track.stop()); return; }
+      cameraStream = stream;
+      isbnVideo.srcObject = stream;
+      isbnVideo.hidden = false;
+      if (isbnStop) isbnStop.hidden = false;
+      await isbnVideo.play();
+      setIsbnStatus('Point the camera at the ISBN barcode.');
+      const tick = async () => {
+        if (session !== cameraSession) return;
+        try {
+          const matches = await detector.detect(isbnVideo);
+          if (session !== cameraSession) return;
+          const isbn = matches.map(item => normaliseIsbn(item.rawValue)).find(Boolean);
+          if (isbn) { isbnInput.value = isbn; stopIsbnCamera(); void findIsbn(); return; }
+          scanTimer = window.setTimeout(tick, 250);
+        } catch { if (session === cameraSession) { stopIsbnCamera(); setIsbnStatus('Scanning failed. Enter the ISBN manually.'); } }
+      };
+      void tick();
+    } catch {
+      if (session === cameraSession) { stopIsbnCamera(); setIsbnStatus('Camera unavailable. Enter the ISBN manually.'); }
+    }
+  }
+  isbnLookup?.addEventListener('click', findIsbn);
+  isbnScan?.addEventListener('click', scanIsbn);
+  isbnStop?.addEventListener('click', () => { stopIsbnCamera(); setIsbnStatus('Camera stopped.'); });
+  isbnInput?.addEventListener('input', () => { isbnRequest++; if (isbnLookup) isbnLookup.disabled = false; setIsbnStatus(''); });
+  window.addEventListener('pagehide', stopIsbnCamera);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopIsbnCamera(); });
+
   function selectAdminTab(id: string, focus = false) {
+    if (id !== "add-books-tab") { stopIsbnCamera(); isbnRequest++; if (isbnLookup) isbnLookup.disabled = false; }
     for (const tab of adminTabs) {
       const selected = tab.id === id;
       tab.setAttribute('aria-selected', String(selected));
@@ -289,6 +412,7 @@
   }
 
   function showLogin() {
+    resetIsbn();
     if (loginPanel) loginPanel.hidden = false;
     if (dashboardPanel) dashboardPanel.hidden = true;
   }
@@ -493,6 +617,7 @@
 
     if (bookCover) bookCover.value = '';
     showSelectedCover();
+    resetIsbn();
     bookId.value = String(book.id);
     bookTitle.value = getString(book, ['title', 'name']) ?? '';
     bookAuthor.value = getString(book, ['author', 'authors']) ?? '';
@@ -558,6 +683,7 @@
   function resetBookForm() {
     if (!bookForm || !bookId || !saveButton || !cancelEditButton || !currentCover) return;
     bookForm.reset();
+    resetIsbn();
     syncQuickOptions();
     showSelectedCover();
     if (optionalDetails) optionalDetails.open = false;
@@ -669,6 +795,9 @@
     let coverUrl = previousCover;
 
     savingBook = true;
+    stopIsbnCamera();
+    isbnRequest++;
+    if (isbnLookup) isbnLookup.disabled = false;
     const controls = Array.from(bookForm.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement>('input, select, textarea, button'));
     const previouslyDisabled = controls.map(control => control.disabled);
     controls.forEach(control => { control.disabled = true; });
@@ -959,4 +1088,13 @@
   .quick-options button[data-quick-condition="Good"] { background: #f1dcd3; }
   .quick-options button[aria-pressed="true"] { color: #fffdf8; background: var(--green); border-color: var(--green); }
   .quick-options button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+  .isbn-picker { padding: 12px; margin-bottom: 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--cream); }
+  .isbn-picker label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+  .isbn-row { display: flex; gap: 8px; align-items: center; }
+  .isbn-row input { min-width: 0; }
+  .isbn-row button { flex-shrink: 0; }
+  #scan-isbn, #stop-scan { margin-top: 8px; min-height: 44px; }
+  #isbn-video { display: block; width: 100%; max-height: 220px; object-fit: contain; margin-top: 8px; background: #263d32; border-radius: 5px; }
+  #isbn-status { margin: 8px 0 0; font-size: 12px; color: var(--green); }
+  #isbn-status:empty { display: none; }
 </style>
