@@ -74,10 +74,10 @@
                 <label for="book-cover" class="photo-label">
                   <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 6h4l2-3h4l2 3h4a2 2 0 0 1 2 2v11H2V8a2 2 0 0 1 2-2Z"/><circle cx="12" cy="12" r="4"/></svg>
                   <strong>Take photo or choose from library</strong>
-                  <span>Book cover · JPEG, PNG, WebP or AVIF · up to 5 MB</span>
+                  <span>Book cover · automatically resized and compressed · up to 30 MB before processing</span>
                   <img id="cover-preview" alt="Selected book cover" hidden />
                 </label>
-                <input id="book-cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp,image/avif" />
+                <input id="book-cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif" />
                 <button class="quiet-button" type="button" id="clear-cover" hidden>Remove selected photo</button>
                 <p class="current-cover" id="current-cover" hidden></p>
               </div>
@@ -124,6 +124,7 @@
 
               <div class="form-actions">
                 <button class="primary-button" id="save-book" type="submit">Add book <span aria-hidden="true">→</span></button>
+                <button class="quiet-button" id="save-another" type="submit">Save and add another</button>
                 <button class="quiet-button" id="cancel-edit" type="button" hidden>Cancel edit</button>
               </div>
             </form>
@@ -198,6 +199,8 @@
   const currentCover = document.querySelector<HTMLParagraphElement>('#current-cover');
   const bookSold = document.querySelector<HTMLInputElement>('#book-sold');
   const saveButton = document.querySelector<HTMLButtonElement>('#save-book');
+  const saveAnotherButton = document.querySelector<HTMLButtonElement>('#save-another');
+  let savingBook = false;
   const cancelEditButton = document.querySelector<HTMLButtonElement>('#cancel-edit');
   const refreshButton = document.querySelector<HTMLButtonElement>('#refresh-books');
   const signOutButton = document.querySelector<HTMLButtonElement>('#sign-out');
@@ -513,6 +516,7 @@
     bookSold.checked = book.sold === true;
     saveButton.innerHTML = 'Save changes <span aria-hidden="true">→</span>';
     cancelEditButton.hidden = false;
+    if (saveAnotherButton) saveAnotherButton.hidden = true;
     selectAdminTab("add-books-tab");
     bookTitle.focus();
   }
@@ -562,6 +566,7 @@
     currentCover.hidden = true;
     saveButton.innerHTML = 'Add book <span aria-hidden="true">→</span>';
     cancelEditButton.hidden = true;
+    if (saveAnotherButton) saveAnotherButton.hidden = false;
   }
 
   async function updateSoldStatus(book: BookRow, isSold: boolean) {
@@ -606,16 +611,48 @@
     await loadBooks();
   }
 
+  // Resize in the browser; only the resulting image is sent to storage.
+  async function optimiseCover(file: File): Promise<File> {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/heic', 'image/heif'];
+    if ((!allowed.includes(file.type) && !/\.(jpe?g|png|webp|avif|heic|heif)$/i.test(file.name)) || file.size > 30 * 1024 * 1024) {
+      throw new Error('Choose a supported photo under 30 MB.');
+    }
+    const url = URL.createObjectURL(file);
+    try {
+      const image = new Image();
+      image.src = url;
+      try { await image.decode(); } catch {
+        throw new Error('This photo could not be opened. Try a JPEG photo or choose a different image.');
+      }
+      const scale = Math.min(1, 1400 / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Photo processing is unavailable in this browser.');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      let blob: Blob | null = null;
+      for (const quality of [0.85, 0.72, 0.58]) {
+        blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+        if (blob && blob.size <= 1024 * 1024) break;
+      }
+      if (!blob || blob.type !== 'image/jpeg' || blob.size > 5 * 1024 * 1024) throw new Error('Photo compression failed. Choose a smaller photo.');
+      if (['image/jpeg', 'image/png', 'image/webp', 'image/avif'].includes(file.type) && file.size <= blob.size && scale === 1) return file;
+      return new File([blob], 'book-cover.jpg', { type: 'image/jpeg' });
+    } finally { URL.revokeObjectURL(url); }
+  }
+
   async function saveBook(event: SubmitEvent) {
     event.preventDefault();
     if (!supabase || !bookForm || !bookId || !bookTitle || !bookAuthor || !bookDescription || !bookPrice || !bookCondition || !bookCover || !bookSold) return;
     clearNotice(dashboardNotice);
 
-    const file = bookCover.files?.[0];
-    if (file && (file.size > 5 * 1024 * 1024 || !['image/jpeg', 'image/png', 'image/webp', 'image/avif'].includes(file.type))) {
-      setNotice(dashboardNotice, 'Choose a JPEG, PNG, WebP or AVIF image smaller than 5 MB.', 'error');
-      return;
-    }
+    if (savingBook) return;
+    const originalFile = bookCover.files?.[0];
+    const addAnother = event.submitter === saveAnotherButton && !bookId.value;
+    let file: File | undefined;
 
     const parsedPrice = Number(bookPrice.value);
     if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
@@ -631,7 +668,18 @@
     let uploadedPath: string | undefined;
     let coverUrl = previousCover;
 
+    savingBook = true;
+    const controls = Array.from(bookForm.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement>('input, select, textarea, button'));
+    const previouslyDisabled = controls.map(control => control.disabled);
+    controls.forEach(control => { control.disabled = true; });
     try {
+      if (originalFile) {
+        setNotice(dashboardNotice, 'Preparing your cover photo…', 'success');
+        try { file = await optimiseCover(originalFile); } catch (error) {
+          setNotice(dashboardNotice, error instanceof Error ? error.message : 'Could not prepare the photo.', 'error');
+          return;
+        }
+      }
       if (file) {
         const extension = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) || 'img';
         uploadedPath = `book-covers/${crypto.randomUUID()}.${extension}`;
@@ -666,7 +714,8 @@
       }
 
       resetBookForm();
-      setNotice(dashboardNotice, editingId ? 'Book updated.' : 'Book added.', 'success');
+      setNotice(dashboardNotice, editingId ? 'Book updated.' : addAnother ? 'Book added. Ready for the next one!' : 'Book added.', 'success');
+      if (!addAnother) selectAdminTab('manage-books-tab');
       await loadBooks();
     } catch (error) {
       console.error('Unable to save book:', error);
@@ -675,6 +724,9 @@
         if (cleanupError) console.error('The uploaded image could not be cleaned up:', cleanupError);
       }
       setNotice(dashboardNotice, 'Could not save this book. Check the database setup and try again.', 'error');
+    } finally {
+      controls.forEach((control, index) => { control.disabled = previouslyDisabled[index]; });
+      savingBook = false;
     }
   }
 
