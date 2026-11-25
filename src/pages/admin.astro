@@ -51,15 +51,19 @@
         <div class="dashboard-heading">
           <div>
             <div class="eyebrow">Your shelves</div>
-            <h2 id="dashboard-title">Manage your books</h2>
+            <h2 id="dashboard-title">Your bookshop</h2>
           </div>
           <button class="quiet-button" id="sign-out" type="button">Sign out <span aria-hidden="true">↗</span></button>
         </div>
 
         <p class="notice" id="dashboard-notice" role="status" aria-live="polite" hidden></p>
 
+        <div class="admin-tabs" role="tablist" aria-label="Book management">
+          <button type="button" role="tab" id="add-books-tab" aria-controls="add-books-panel" aria-selected="true" tabindex="0">＋ Add Books</button>
+          <button type="button" role="tab" id="manage-books-tab" aria-controls="manage-books-panel" aria-selected="false" tabindex="-1">Manage Books</button>
+        </div>
         <div class="admin-layout">
-          <section class="panel editor-panel" aria-labelledby="editor-title">
+          <section class="panel editor-panel" id="add-books-panel" role="tabpanel" aria-labelledby="add-books-tab">
             <div class="panel-heading">
               <div class="eyebrow">Book details</div>
               <h2 id="editor-title">Add a book</h2>
@@ -107,7 +111,7 @@
             </form>
           </section>
 
-          <section class="panel inventory-panel" aria-labelledby="inventory-title">
+          <section class="panel inventory-panel" id="manage-books-panel" role="tabpanel" aria-labelledby="manage-books-tab" hidden>
             <div class="inventory-heading">
               <div>
                 <div class="eyebrow">Supabase · public.books</div>
@@ -217,6 +221,30 @@
     if (!element) return;
     element.textContent = '';
     element.hidden = true;
+  }
+
+  const adminTabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.admin-tabs [role="tab"]'));
+
+  function selectAdminTab(id: string, focus = false) {
+    for (const tab of adminTabs) {
+      const selected = tab.id === id;
+      tab.setAttribute('aria-selected', String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      const panel = document.getElementById(tab.getAttribute('aria-controls') ?? '');
+      if (panel) panel.hidden = !selected;
+      if (selected && focus) tab.focus();
+    }
+  }
+
+  for (const tab of adminTabs) {
+    tab.addEventListener('click', () => selectAdminTab(tab.id));
+    tab.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const index = adminTabs.indexOf(tab);
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? adminTabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + adminTabs.length) % adminTabs.length;
+      selectAdminTab(adminTabs[next].id, true);
+    });
   }
 
   function showLogin() {
@@ -443,6 +471,7 @@
     bookSold.checked = book.sold === true;
     saveButton.innerHTML = 'Save changes <span aria-hidden="true">→</span>';
     cancelEditButton.hidden = false;
+    selectAdminTab("add-books-tab");
     bookTitle.focus();
   }
 
@@ -650,6 +679,7 @@
     }
 
     resetBookForm();
+    selectAdminTab("add-books-tab");
     await showLogin();
   });
 
@@ -707,7 +737,11 @@
   .dashboard-heading, .inventory-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
   .dashboard-heading { margin-bottom: 20px; }
   .dashboard-heading h2, .inventory-heading h2 { margin-bottom: 0; }
-  .admin-layout { display: grid; grid-template-columns: minmax(270px, .75fr) minmax(0, 1.25fr); align-items: start; gap: 22px; }
+  .admin-layout { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 22px; }
+  .admin-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .admin-tabs button { min-height: 44px; padding: 8px; border: 1px solid #cfd7cb; border-radius: 5px; background: var(--paper); color: var(--green); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .admin-tabs button[aria-selected="true"] { background: var(--green); color: #fffdf8; border-color: var(--green); }
+  .admin-tabs button:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
   .editor-panel, .inventory-panel { padding: 22px; }
   .editor-panel .panel-heading h2 { font-size: 22px; }
   .form-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
