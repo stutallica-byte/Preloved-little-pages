@@ -112,10 +112,7 @@
                 <label for="book-description">Description</label>
                 <textarea id="book-description" name="description" rows="3" maxlength="2000" placeholder="Any additional details"></textarea>
               </details>
-              <label class="checkbox-row" for="book-sold">
-                <input id="book-sold" name="sold" type="checkbox" />
-                <span>Mark this book as sold</span>
-              </label>
+              <input id="book-sold" name="sold" type="checkbox" hidden />
 
               <div class="form-actions">
                 <button class="primary-button" id="save-book" type="submit">Add book <span aria-hidden="true">→</span></button>
@@ -696,7 +693,7 @@
     if (!bookPrice.value || !Number.isFinite(price) || price < 0) return;
     const addAnother = event.submitter === saveAnotherButton && !bookId.value;
     const existing = inventoryRows.find(book => String(book.id) === bookId.value);
-    const record: BookRow = {id: existing?.id ?? crypto.randomUUID(),title:bookTitle.value.trim(),author:bookAuthor.value.trim(),description:bookDescription.value.trim(),price,condition:bookCondition.value,sold:bookSold.checked,image_url:existing?.image_url};
+    const record: BookRow = {id: existing?.id ?? crypto.randomUUID(),title:bookTitle.value.trim(),author:bookAuthor.value.trim(),description:bookDescription.value.trim(),price,condition:bookCondition.value,sold:existing?.sold === true,image_url:existing?.image_url};
     const original = bookCover.files?.[0];
     savingBook = true;
     stopIsbnCamera();
