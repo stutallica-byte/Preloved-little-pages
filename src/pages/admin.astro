@@ -15,8 +15,6 @@
     />
   </head>
   <body>
-    <div class="announcement"><span aria-hidden="true">✳</span> Preloved Little Pages · Admin</div>
-
     <header class="site-header">
       <a class="brand" href="/" aria-label="Preloved Little Pages home">
         <span class="brand-mark" aria-hidden="true"><img src="/preloved-little-pages-logo.webp" alt="" width="56" height="56" decoding="async" /></span>
@@ -53,34 +51,61 @@
         <div class="dashboard-heading">
           <div>
             <div class="eyebrow">Your shelves</div>
-            <h2 id="dashboard-title">Manage your books</h2>
+            <h2 id="dashboard-title">Your bookshop</h2>
           </div>
           <button class="quiet-button" id="sign-out" type="button">Sign out <span aria-hidden="true">↗</span></button>
         </div>
 
         <p class="notice" id="dashboard-notice" role="status" aria-live="polite" hidden></p>
 
+        <div class="admin-tabs" role="tablist" aria-label="Book management">
+          <button type="button" role="tab" id="add-books-tab" aria-controls="add-books-panel" aria-selected="true" tabindex="0">＋ Add Books</button>
+          <button type="button" role="tab" id="manage-books-tab" aria-controls="manage-books-panel" aria-selected="false" tabindex="-1">Manage Books</button>
+        </div>
         <div class="admin-layout">
-          <section class="panel editor-panel" aria-labelledby="editor-title">
+          <section class="panel editor-panel" id="add-books-panel" role="tabpanel" aria-labelledby="add-books-tab">
             <div class="panel-heading">
               <div class="eyebrow">Book details</div>
               <h2 id="editor-title">Add a book</h2>
             </div>
             <form id="book-form">
               <input id="book-id" name="id" type="hidden" />
-              <label for="book-title">Title</label>
-              <input id="book-title" name="title" type="text" maxlength="200" required />
+              <div class="isbn-picker">
+                <label for="book-isbn">ISBN (optional)</label>
+                <div class="isbn-row">
+                  <input id="book-isbn" type="text" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="ISBN barcode number" />
+                  <button type="button" class="quiet-button" id="lookup-isbn">Find book</button>
+                </div>
+                <button type="button" class="quiet-button" id="scan-isbn">Scan barcode</button>
+                <video id="isbn-video" playsinline muted hidden></video>
+                <button type="button" class="quiet-button" id="stop-scan" hidden>Stop camera</button>
+                <p id="isbn-status" role="status" aria-live="polite"></p>
+              </div>
+              <div class="photo-picker">
+                <label for="book-cover" class="photo-label">
+                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 6h4l2-3h4l2 3h4a2 2 0 0 1 2 2v11H2V8a2 2 0 0 1 2-2Z"/><circle cx="12" cy="12" r="4"/></svg>
+                  <strong>Take photo or choose from library</strong>
+                  <span>Book cover · automatically resized and compressed · up to 30 MB before processing</span>
+                  <img id="cover-preview" alt="Selected book cover" hidden />
+                </label>
+                <input id="book-cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif" />
+                <button class="quiet-button" type="button" id="clear-cover" hidden>Remove selected photo</button>
+                <p class="current-cover" id="current-cover" hidden></p>
+              </div>
+              <label for="book-title">Book title</label>
+              <input id="book-title" name="title" type="text" maxlength="200" placeholder="Enter book title" required />
 
               <label for="book-author">Author</label>
-              <input id="book-author" name="author" type="text" maxlength="200" required />
-
-              <label for="book-description">Description</label>
-              <textarea id="book-description" name="description" rows="3" maxlength="2000"></textarea>
+              <input id="book-author" name="author" type="text" maxlength="200" placeholder="Enter author" required />
 
               <div class="form-row">
                 <div>
                   <label for="book-price">Price (£)</label>
                   <input id="book-price" name="price" type="number" min="0" step="0.01" required />
+                  <div class="quick-options" role="group" aria-label="Quick price selection">
+                    {['1','2','3','4'].map((price) => <button type="button" data-quick-price={price} aria-pressed="false">£{price}</button>)}
+                    <button type="button" data-quick-price="other">Other</button>
+                  </div>
                 </div>
                 <div>
                   <label for="book-condition">Condition</label>
@@ -90,32 +115,50 @@
                     <option value="Very good">Very good</option>
                     <option value="Good">Good</option>
                   </select>
+                  <div class="quick-options" role="group" aria-label="Quick condition selection">
+                    {['Excellent','Very good','Good'].map((condition) => <button type="button" data-quick-condition={condition} aria-pressed="false">{condition}</button>)}
+                  </div>
                 </div>
               </div>
 
-              <label for="book-cover">Cover image <span class="label-note">JPEG, PNG, WebP or AVIF · up to 5 MB</span></label>
-              <input id="book-cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp,image/avif" />
-              <p class="current-cover" id="current-cover" hidden></p>
 
-              <label class="checkbox-row" for="book-sold">
-                <input id="book-sold" name="sold" type="checkbox" />
-                <span>Mark this book as sold</span>
-              </label>
+
+              <details class="optional-details" id="optional-details">
+                <summary>Additional details (optional)</summary>
+                <label for="book-description">Description</label>
+                <textarea id="book-description" name="description" rows="3" maxlength="2000" placeholder="Any additional details"></textarea>
+              </details>
+              <input id="book-sold" name="sold" type="checkbox" hidden />
 
               <div class="form-actions">
                 <button class="primary-button" id="save-book" type="submit">Add book <span aria-hidden="true">→</span></button>
+                <button class="quiet-button" id="save-another" type="submit">Save and add another</button>
                 <button class="quiet-button" id="cancel-edit" type="button" hidden>Cancel edit</button>
               </div>
             </form>
           </section>
 
-          <section class="panel inventory-panel" aria-labelledby="inventory-title">
+          <section class="panel inventory-panel" id="manage-books-panel" role="tabpanel" aria-labelledby="manage-books-tab" hidden>
             <div class="inventory-heading">
               <div>
                 <div class="eyebrow">Supabase · public.books</div>
                 <h2 id="inventory-title">Your inventory</h2>
               </div>
               <button class="quiet-button" id="refresh-books" type="button">Refresh <span aria-hidden="true">↻</span></button>
+            </div>
+            <div class="stock-counters" aria-label="Stock totals" aria-live="polite">
+              <div><strong id="stock-total">—</strong><span>Total books</span></div>
+              <div><strong id="stock-available">—</strong><span>Available</span></div>
+              <div><strong id="stock-sold">—</strong><span>Sold</span></div>
+            </div>
+            <div class="inventory-tools">
+              <label for="inventory-search">Search books</label>
+              <input id="inventory-search" type="search" placeholder="Search by title or author" />
+              <div class="stock-filters" role="group" aria-label="Filter by availability">
+                <button type="button" data-stock-filter="all" aria-pressed="true">All books</button>
+                <button type="button" data-stock-filter="available" aria-pressed="false">Available</button>
+                <button type="button" data-stock-filter="sold" aria-pressed="false">Sold</button>
+              </div>
             </div>
             <div class="inventory-state" id="inventory-state" role="status" aria-live="polite">Loading your books...</div>
             <div class="inventory-list" id="inventory-list" aria-busy="true"></div>
@@ -155,9 +198,31 @@
   const bookPrice = document.querySelector<HTMLInputElement>('#book-price');
   const bookCondition = document.querySelector<HTMLSelectElement>('#book-condition');
   const bookCover = document.querySelector<HTMLInputElement>('#book-cover');
+  const coverPreview = document.querySelector<HTMLImageElement>("#cover-preview");
+  const clearCover = document.querySelector<HTMLButtonElement>("#clear-cover");
+  const optionalDetails = document.querySelector<HTMLDetailsElement>("#optional-details");
+  let previewUrl: string | undefined;
+  function showSelectedCover() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = undefined;
+    const file = bookCover?.files?.[0];
+    if (file && coverPreview) {
+      previewUrl = URL.createObjectURL(file);
+      coverPreview.src = previewUrl;
+      coverPreview.hidden = false;
+    } else if (coverPreview) {
+      coverPreview.removeAttribute("src");
+      coverPreview.hidden = true;
+    }
+    if (clearCover) clearCover.hidden = !file;
+  }
+  bookCover?.addEventListener("change", showSelectedCover);
+  clearCover?.addEventListener("click", () => { if (bookCover) bookCover.value = ""; showSelectedCover(); });
   const currentCover = document.querySelector<HTMLParagraphElement>('#current-cover');
   const bookSold = document.querySelector<HTMLInputElement>('#book-sold');
   const saveButton = document.querySelector<HTMLButtonElement>('#save-book');
+  const saveAnotherButton = document.querySelector<HTMLButtonElement>('#save-another');
+  let savingBook = false;
   const cancelEditButton = document.querySelector<HTMLButtonElement>('#cancel-edit');
   const refreshButton = document.querySelector<HTMLButtonElement>('#refresh-books');
   const signOutButton = document.querySelector<HTMLButtonElement>('#sign-out');
@@ -221,7 +286,145 @@
     element.hidden = true;
   }
 
+  const adminTabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.admin-tabs [role="tab"]'));
+
+  const isbnInput = document.querySelector<HTMLInputElement>('#book-isbn');
+  const isbnLookup = document.querySelector<HTMLButtonElement>('#lookup-isbn');
+  const isbnScan = document.querySelector<HTMLButtonElement>('#scan-isbn');
+  const isbnStop = document.querySelector<HTMLButtonElement>('#stop-scan');
+  const isbnVideo = document.querySelector<HTMLVideoElement>('#isbn-video');
+  const isbnStatus = document.querySelector<HTMLParagraphElement>('#isbn-status');
+  let isbnRequest = 0;
+  let cameraSession = 0;
+  let cameraStream: MediaStream | undefined;
+  let scanTimer: number | undefined;
+
+  function setIsbnStatus(message: string) { if (isbnStatus) isbnStatus.textContent = message; }
+  function normaliseIsbn(value: string) {
+    const isbn = value.replace(/[\s-]/g, '').toUpperCase();
+    if (/^97[89]\d{10}$/.test(isbn)) {
+      const sum = [...isbn].reduce((n, digit, i) => n + Number(digit) * (i % 2 ? 3 : 1), 0);
+      return sum % 10 === 0 ? isbn : '';
+    }
+    if (/^\d{9}[\dX]$/.test(isbn)) {
+      const sum = [...isbn].reduce((n, digit, i) => n + (digit === 'X' ? 10 : Number(digit)) * (10 - i), 0);
+      return sum % 11 === 0 ? isbn : '';
+    }
+    return '';
+  }
+
+  function stopIsbnCamera() {
+    cameraSession++;
+    if (scanTimer !== undefined) window.clearTimeout(scanTimer);
+    cameraStream?.getTracks().forEach(track => track.stop());
+    cameraStream = undefined;
+    if (isbnVideo) { isbnVideo.srcObject = null; isbnVideo.hidden = true; }
+    if (isbnStop) isbnStop.hidden = true;
+    if (isbnScan) isbnScan.disabled = false;
+  }
+
+  function resetIsbn() {
+    isbnRequest++;
+    stopIsbnCamera();
+    if (isbnInput) isbnInput.value = '';
+    if (isbnLookup) isbnLookup.disabled = false;
+    setIsbnStatus('');
+  }
+
+  async function findIsbn() {
+    if (!isbnInput || !isbnLookup || savingBook) return;
+    const isbn = normaliseIsbn(isbnInput.value);
+    if (!isbn) { setIsbnStatus('Enter a valid 10- or 13-digit ISBN.'); return; }
+    const request = ++isbnRequest;
+    isbnLookup.disabled = true;
+    setIsbnStatus('Looking for book details…');
+    try {
+      const response = await fetch('https://openlibrary.org/api/books?bibkeys=ISBN:' + encodeURIComponent(isbn) + '&format=json&jscmd=data', { signal: AbortSignal.timeout(12000) });
+      if (!response.ok) throw new Error('Lookup failed');
+      const result = await response.json();
+      if (request !== isbnRequest || savingBook) return;
+      const book = result['ISBN:' + isbn];
+      if (!book || typeof book.title !== 'string') { setIsbnStatus('No match found. You can enter the details manually.'); return; }
+      const authors = Array.isArray(book.authors) ? book.authors.map((author: {name?: string}) => author.name).filter(Boolean).join(', ') : '';
+      if (bookTitle && !bookTitle.value.trim()) bookTitle.value = book.title.slice(0, 200);
+      if (bookAuthor && !bookAuthor.value.trim()) bookAuthor.value = authors.slice(0, 200);
+      setIsbnStatus('Book found: ' + book.title + '. Check the title and author before saving. Existing entries are kept.');
+    } catch {
+      if (request === isbnRequest) setIsbnStatus('Lookup unavailable. Please enter the book details manually.');
+    } finally {
+      if (request === isbnRequest) isbnLookup.disabled = false;
+    }
+  }
+
+  async function scanIsbn() {
+    if (!isbnVideo || !isbnInput || !isbnScan || savingBook) return;
+    const Detector = (window as unknown as { BarcodeDetector?: new (options: {formats: string[]}) => { detect(video: HTMLVideoElement): Promise<Array<{rawValue: string}>> } }).BarcodeDetector;
+    if (!Detector || !navigator.mediaDevices?.getUserMedia) {
+      setIsbnStatus('Camera barcode scanning is unavailable in this browser. Enter the ISBN printed below the barcode.');
+      isbnInput.focus();
+      return;
+    }
+    stopIsbnCamera();
+    const session = cameraSession;
+    isbnScan.disabled = true;
+    try {
+      const detector = new Detector({formats: ['ean_13']});
+      const stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}}, audio: false});
+      if (session !== cameraSession) { stream.getTracks().forEach(track => track.stop()); return; }
+      cameraStream = stream;
+      isbnVideo.srcObject = stream;
+      isbnVideo.hidden = false;
+      if (isbnStop) isbnStop.hidden = false;
+      await isbnVideo.play();
+      setIsbnStatus('Point the camera at the ISBN barcode.');
+      const tick = async () => {
+        if (session !== cameraSession) return;
+        try {
+          const matches = await detector.detect(isbnVideo);
+          if (session !== cameraSession) return;
+          const isbn = matches.map(item => normaliseIsbn(item.rawValue)).find(Boolean);
+          if (isbn) { isbnInput.value = isbn; stopIsbnCamera(); void findIsbn(); return; }
+          scanTimer = window.setTimeout(tick, 250);
+        } catch { if (session === cameraSession) { stopIsbnCamera(); setIsbnStatus('Scanning failed. Enter the ISBN manually.'); } }
+      };
+      void tick();
+    } catch {
+      if (session === cameraSession) { stopIsbnCamera(); setIsbnStatus('Camera unavailable. Enter the ISBN manually.'); }
+    }
+  }
+  isbnLookup?.addEventListener('click', findIsbn);
+  isbnScan?.addEventListener('click', scanIsbn);
+  isbnStop?.addEventListener('click', () => { stopIsbnCamera(); setIsbnStatus('Camera stopped.'); });
+  isbnInput?.addEventListener('input', () => { isbnRequest++; if (isbnLookup) isbnLookup.disabled = false; setIsbnStatus(''); });
+  window.addEventListener('pagehide', stopIsbnCamera);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopIsbnCamera(); });
+
+  function selectAdminTab(id: string, focus = false) {
+    if (id !== "add-books-tab") { stopIsbnCamera(); isbnRequest++; if (isbnLookup) isbnLookup.disabled = false; }
+    for (const tab of adminTabs) {
+      const selected = tab.id === id;
+      tab.setAttribute('aria-selected', String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      const panel = document.getElementById(tab.getAttribute('aria-controls') ?? '');
+      if (panel) panel.hidden = !selected;
+      if (selected && focus) tab.focus();
+    }
+  }
+
+  for (const tab of adminTabs) {
+    tab.addEventListener('click', () => selectAdminTab(tab.id));
+    tab.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const index = adminTabs.indexOf(tab);
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? adminTabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + adminTabs.length) % adminTabs.length;
+      selectAdminTab(adminTabs[next].id, true);
+    });
+  }
+
   function showLogin() {
+    resetInventory();
+    resetIsbn();
     if (loginPanel) loginPanel.hidden = false;
     if (dashboardPanel) dashboardPanel.hidden = true;
   }
@@ -311,21 +514,81 @@
     }
   }
 
+  let inventoryRows: BookRow[] = [];
+  let inventoryReady = false;
+  let inventoryRequest = 0;
+  let stockFilter = 'all';
+  const inventorySearch = document.querySelector<HTMLInputElement>('#inventory-search');
+  const stockFilters = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-stock-filter]'));
+
+  function updateStockCounters() {
+    const sold = inventoryRows.filter(book => book.sold === true).length;
+    for (const [id, count] of [['stock-total', inventoryRows.length], ['stock-available', inventoryRows.length - sold], ['stock-sold', sold]] as const) {
+      const element = document.getElementById(id);
+      if (element) element.textContent = inventoryReady ? String(count) : '—';
+    }
+  }
+
+  function renderFilteredInventory() {
+    if (!inventoryReady || !inventoryList || !inventoryState) return;
+    const query = (inventorySearch?.value ?? '').trim().toLowerCase();
+    const matching = inventoryRows.filter(book => {
+      const sold = book.sold === true;
+      if (stockFilter === 'available' && sold || stockFilter === 'sold' && !sold) return false;
+      const title = getString(book, ['title', 'name']) ?? '';
+      const author = getString(book, ['author', 'authors']) ?? '';
+      return !query || (title + ' ' + author).toLowerCase().includes(query);
+    });
+    inventoryList.replaceChildren(...matching.map(renderBookRow));
+    inventoryState.hidden = matching.length > 0;
+    inventoryState.textContent = inventoryRows.length === 0 ? 'No books yet. Add your first book.' : 'No books match your search or filter.';
+  }
+
+  function resetInventory() {
+    inventoryRequest++;
+    inventoryReady = false;
+    inventoryRows = [];
+    stockFilter = 'all';
+    if (inventorySearch) inventorySearch.value = '';
+    for (const button of stockFilters) button.setAttribute('aria-pressed', String(button.dataset.stockFilter === 'all'));
+    inventoryList?.replaceChildren();
+    updateStockCounters();
+  }
+
+  inventorySearch?.addEventListener('input', renderFilteredInventory);
+  for (const button of stockFilters) {
+    button.addEventListener('click', () => {
+      stockFilter = button.dataset.stockFilter ?? 'all';
+      for (const item of stockFilters) item.setAttribute('aria-pressed', String(item === button));
+      renderFilteredInventory();
+    });
+  }
+
   async function loadBooks() {
     if (!supabase || !inventoryList || !inventoryState) return;
 
+    const request = ++inventoryRequest;
+    inventoryReady = false;
+    updateStockCounters();
     inventoryList.replaceChildren();
     inventoryList.setAttribute('aria-busy', 'true');
     inventoryState.hidden = false;
     inventoryState.textContent = 'Loading your books...';
 
     try {
-      const { data, error } = await supabase
-        .from('books')
-        .select('id,created_at,title,author,price,condition,description,image_url,sold')
-        .order('title', { ascending: true });
-      if (error) throw error;
-      if (!Array.isArray(data)) throw new Error('Supabase returned an invalid books response.');
+      const data: unknown[] = [];
+      const pageSize = 500;
+      for (let offset = 0; ; offset += pageSize) {
+        const { data: page, error } = await supabase.from('books')
+          .select('id,created_at,title,author,price,condition,description,image_url,sold')
+          .order('title', { ascending: true }).order('id', { ascending: true })
+          .range(offset, offset + pageSize - 1);
+        if (request !== inventoryRequest) return;
+        if (error) throw error;
+        if (!Array.isArray(page)) throw new Error('Supabase returned an invalid books response.');
+        data.push(...page);
+        if (page.length < pageSize) break;
+      }
 
       const rows = data.filter(
         (row): row is BookRow =>
@@ -335,18 +598,19 @@
           (typeof row.id === 'string' || typeof row.id === 'number'),
       );
 
-      if (rows.length === 0) {
-        inventoryState.textContent = 'No books yet. Add the first one using the form.';
-        return;
-      }
-
-      inventoryState.hidden = true;
-      inventoryList.append(...rows.map(renderBookRow));
+      inventoryRows = rows;
+      inventoryReady = true;
+      updateStockCounters();
+      renderFilteredInventory();
     } catch (error) {
+      if (request !== inventoryRequest) return;
+      inventoryRows = [];
+      inventoryReady = false;
+      updateStockCounters();
       console.error('Unable to load admin book inventory:', error);
       inventoryState.textContent = 'Could not load your books. Check the database setup and try again.';
     } finally {
-      inventoryList.setAttribute('aria-busy', 'false');
+      if (request === inventoryRequest) inventoryList.setAttribute('aria-busy', 'false');
     }
   }
 
@@ -416,18 +680,29 @@
     remove.textContent = 'Delete';
     remove.addEventListener('click', () => deleteBook(book));
 
-    actions.append(edit, toggleSold, remove);
+    const duplicate = document.createElement('button');
+    duplicate.className = 'small-button';
+    duplicate.type = 'button';
+    duplicate.textContent = 'Duplicate';
+    duplicate.addEventListener('click', () => duplicateBook(book));
+    actions.append(edit, duplicate, toggleSold, remove);
     row.append(details, status, actions);
     return row;
   }
 
   function beginEdit(book: BookRow) {
+    if (savingBook) return;
     if (!bookId || !bookTitle || !bookAuthor || !bookDescription || !bookPrice || !bookCondition || !currentCover || !bookSold || !saveButton || !cancelEditButton) return;
 
+    if (bookForm) delete bookForm.dataset.duplicateDraft;
+    if (bookCover) bookCover.value = '';
+    showSelectedCover();
+    resetIsbn();
     bookId.value = String(book.id);
     bookTitle.value = getString(book, ['title', 'name']) ?? '';
     bookAuthor.value = getString(book, ['author', 'authors']) ?? '';
     bookDescription.value = getString(book, ['description']) ?? '';
+    if (optionalDetails) optionalDetails.open = Boolean(bookDescription.value);
     bookPrice.value = book.price == null ? '' : String(book.price).replace(/[^\d.]/g, '');
 
     const condition = getString(book, ['condition']) ?? '';
@@ -438,6 +713,7 @@
       bookCondition.append(option);
     }
     bookCondition.value = condition;
+    syncQuickOptions();
 
     const coverUrl = getImageUrl(book);
     currentCover.textContent = coverUrl ? 'A cover is currently saved. Choose a new image to replace it.' : 'No cover image saved.';
@@ -445,17 +721,85 @@
     bookSold.checked = book.sold === true;
     saveButton.innerHTML = 'Save changes <span aria-hidden="true">→</span>';
     cancelEditButton.hidden = false;
+    if (saveAnotherButton) saveAnotherButton.hidden = true;
+    selectAdminTab("add-books-tab");
     bookTitle.focus();
   }
+
+  function duplicateBook(book: BookRow) {
+    if (savingBook || !bookForm || !bookId || !bookTitle || !bookAuthor || !bookDescription || !bookPrice || !bookCondition || !bookSold || !currentCover) return;
+    if (bookForm.dataset.duplicateDraft === 'true' || bookId.value || bookTitle.value.trim() || bookAuthor.value.trim() || bookDescription.value.trim() || bookPrice.value || bookCondition.value || bookCover?.files?.length) {
+      if (!window.confirm('Replace the current unsaved book form with a copy of this listing?')) return;
+    }
+    resetBookForm();
+    bookTitle.value = getString(book, ['title', 'name']) ?? '';
+    bookAuthor.value = getString(book, ['author', 'authors']) ?? '';
+    bookDescription.value = getString(book, ['description']) ?? '';
+    if (optionalDetails) optionalDetails.open = Boolean(bookDescription.value);
+    bookPrice.value = book.price == null ? '' : String(book.price).replace(/[^\d.]/g, '');
+    const condition = getString(book, ['condition']) ?? '';
+    if (condition && !Array.from(bookCondition.options).some(option => option.value === condition)) {
+      bookCondition.add(new Option(condition, condition));
+    }
+    bookCondition.value = condition;
+    bookSold.checked = false;
+    syncQuickOptions();
+    bookForm.dataset.duplicateDraft = 'true';
+    currentCover.textContent = 'New listing draft. Choose your own photo for this copy before saving.';
+    currentCover.hidden = false;
+    setNotice(dashboardNotice, 'Listing copied. Check the price and condition and add a new cover photo.', 'success');
+    selectAdminTab('add-books-tab');
+    bookTitle.focus();
+  }
+
+  const quickPrices = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-quick-price]'));
+  const quickConditions = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-quick-condition]'));
+
+  function syncQuickOptions() {
+    for (const button of quickPrices) {
+      if (button.dataset.quickPrice === 'other') continue;
+      button.setAttribute('aria-pressed', String(Boolean(bookPrice?.value) && Number(bookPrice?.value) === Number(button.dataset.quickPrice)));
+    }
+    for (const button of quickConditions) {
+      button.setAttribute('aria-pressed', String(bookCondition?.value === button.dataset.quickCondition));
+    }
+  }
+
+  for (const button of quickPrices) {
+    button.addEventListener('click', () => {
+      if (!bookPrice) return;
+      if (button.dataset.quickPrice === 'other') {
+        bookPrice.focus();
+        return;
+      }
+      bookPrice.value = Number(button.dataset.quickPrice).toFixed(2);
+      syncQuickOptions();
+    });
+  }
+  for (const button of quickConditions) {
+    button.addEventListener('click', () => {
+      if (!bookCondition) return;
+      bookCondition.value = button.dataset.quickCondition ?? '';
+      syncQuickOptions();
+    });
+  }
+  bookPrice?.addEventListener('input', syncQuickOptions);
+  bookCondition?.addEventListener('change', syncQuickOptions);
 
   function resetBookForm() {
     if (!bookForm || !bookId || !saveButton || !cancelEditButton || !currentCover) return;
     bookForm.reset();
+    delete bookForm.dataset.duplicateDraft;
+    resetIsbn();
+    syncQuickOptions();
+    showSelectedCover();
+    if (optionalDetails) optionalDetails.open = false;
     bookId.value = '';
     currentCover.textContent = '';
     currentCover.hidden = true;
     saveButton.innerHTML = 'Add book <span aria-hidden="true">→</span>';
     cancelEditButton.hidden = true;
+    if (saveAnotherButton) saveAnotherButton.hidden = false;
   }
 
   async function updateSoldStatus(book: BookRow, isSold: boolean) {
@@ -500,16 +844,48 @@
     await loadBooks();
   }
 
+  // Resize in the browser; only the resulting image is sent to storage.
+  async function optimiseCover(file: File): Promise<File> {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/heic', 'image/heif'];
+    if ((!allowed.includes(file.type) && !/\.(jpe?g|png|webp|avif|heic|heif)$/i.test(file.name)) || file.size > 30 * 1024 * 1024) {
+      throw new Error('Choose a supported photo under 30 MB.');
+    }
+    const url = URL.createObjectURL(file);
+    try {
+      const image = new Image();
+      image.src = url;
+      try { await image.decode(); } catch {
+        throw new Error('This photo could not be opened. Try a JPEG photo or choose a different image.');
+      }
+      const scale = Math.min(1, 1400 / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Photo processing is unavailable in this browser.');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      let blob: Blob | null = null;
+      for (const quality of [0.85, 0.72, 0.58]) {
+        blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+        if (blob && blob.size <= 1024 * 1024) break;
+      }
+      if (!blob || blob.type !== 'image/jpeg' || blob.size > 5 * 1024 * 1024) throw new Error('Photo compression failed. Choose a smaller photo.');
+      if (['image/jpeg', 'image/png', 'image/webp', 'image/avif'].includes(file.type) && file.size <= blob.size && scale === 1) return file;
+      return new File([blob], 'book-cover.jpg', { type: 'image/jpeg' });
+    } finally { URL.revokeObjectURL(url); }
+  }
+
   async function saveBook(event: SubmitEvent) {
     event.preventDefault();
     if (!supabase || !bookForm || !bookId || !bookTitle || !bookAuthor || !bookDescription || !bookPrice || !bookCondition || !bookCover || !bookSold) return;
     clearNotice(dashboardNotice);
 
-    const file = bookCover.files?.[0];
-    if (file && (file.size > 5 * 1024 * 1024 || !['image/jpeg', 'image/png', 'image/webp', 'image/avif'].includes(file.type))) {
-      setNotice(dashboardNotice, 'Choose a JPEG, PNG, WebP or AVIF image smaller than 5 MB.', 'error');
-      return;
-    }
+    if (savingBook) return;
+    const originalFile = bookCover.files?.[0];
+    const addAnother = event.submitter === saveAnotherButton && !bookId.value;
+    let file: File | undefined;
 
     const parsedPrice = Number(bookPrice.value);
     if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
@@ -518,14 +894,30 @@
     }
 
     const editingId = bookId.value;
-    const existing = editingId
-      ? Array.from(inventoryList?.querySelectorAll<HTMLElement>('[data-book-id]') ?? []).find((item) => item.dataset.bookId === editingId)
-      : undefined;
-    const previousCover = existing?.dataset.coverUrl ?? '';
+    const existing = editingId ? inventoryRows.find(book => String(book.id) === editingId) : undefined;
+    if (editingId && (!inventoryReady || !existing)) {
+      setNotice(dashboardNotice, 'Refresh the inventory and reopen the book before saving changes.', 'error');
+      return;
+    }
+    const previousCover = existing ? getImageUrl(existing) ?? '' : '';
     let uploadedPath: string | undefined;
     let coverUrl = previousCover;
 
+    savingBook = true;
+    stopIsbnCamera();
+    isbnRequest++;
+    if (isbnLookup) isbnLookup.disabled = false;
+    const controls = Array.from(bookForm.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement>('input, select, textarea, button'));
+    const previouslyDisabled = controls.map(control => control.disabled);
+    controls.forEach(control => { control.disabled = true; });
     try {
+      if (originalFile) {
+        setNotice(dashboardNotice, 'Preparing your cover photo…', 'success');
+        try { file = await optimiseCover(originalFile); } catch (error) {
+          setNotice(dashboardNotice, error instanceof Error ? error.message : 'Could not prepare the photo.', 'error');
+          return;
+        }
+      }
       if (file) {
         const extension = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) || 'img';
         uploadedPath = `book-covers/${crypto.randomUUID()}.${extension}`;
@@ -545,12 +937,11 @@
         price: parsedPrice,
         condition: bookCondition.value,
         image_url: coverUrl || null,
-        sold: bookSold.checked,
       };
 
       const result = editingId
         ? await supabase.from('books').update(record).eq('id', editingId)
-        : await supabase.from('books').insert(record);
+        : await supabase.from('books').insert({ ...record, sold: false });
       if (result.error) throw result.error;
 
       const previousImagePath = getBucketPath(previousCover);
@@ -560,7 +951,8 @@
       }
 
       resetBookForm();
-      setNotice(dashboardNotice, editingId ? 'Book updated.' : 'Book added.', 'success');
+      setNotice(dashboardNotice, editingId ? 'Book updated.' : addAnother ? 'Book added. Ready for the next one!' : 'Book added.', 'success');
+      if (!addAnother) selectAdminTab('manage-books-tab');
       await loadBooks();
     } catch (error) {
       console.error('Unable to save book:', error);
@@ -569,6 +961,9 @@
         if (cleanupError) console.error('The uploaded image could not be cleaned up:', cleanupError);
       }
       setNotice(dashboardNotice, 'Could not save this book. Check the database setup and try again.', 'error');
+    } finally {
+      controls.forEach((control, index) => { control.disabled = previouslyDisabled[index]; });
+      savingBook = false;
     }
   }
 
@@ -652,6 +1047,7 @@
     }
 
     resetBookForm();
+    selectAdminTab("add-books-tab");
     await showLogin();
   });
 
@@ -663,10 +1059,10 @@
   * { box-sizing: border-box; }
   body { margin: 0; color: var(--ink); background: var(--cream); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
   a { color: inherit; text-decoration: none; }
-  .page-width { width: min(1120px, calc(100% - 48px)); margin-inline: auto; }
+  .page-width { width: min(1160px, calc(100% - 64px)); margin-inline: auto; }
   .announcement { min-height: 34px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #fffdf8; background: var(--green-deep); font-size: 10px; letter-spacing: .04em; }
   .announcement span { color: #e9bd7a; }
-  .site-header { height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-inline: max(24px, calc((100% - 1200px) / 2)); background: var(--pink); }
+  .site-header { height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 28px; padding-inline: max(32px, calc((100% - 1260px) / 2)); background: var(--pink); }
   .brand { display: inline-flex; align-items: center; gap: 9px; }
   .brand-mark { width: 48px; height: 48px; color: var(--green);  }
   .brand-mark img { width: 100%; height: 100%; display: block; object-fit: contain; border-radius: 50%; }
@@ -674,13 +1070,14 @@
   .brand-mark path { stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .brand-name { font-family: var(--serif); font-size: 18px; letter-spacing: -.055em; line-height: 1; }
   .brand-name b { display: block; font-size: 15px; font-weight: 500; letter-spacing: .005em; }
-  .back-link { color: #523e3d; font-size: 11px; font-weight: 600; }
+  .back-link { flex-shrink: 0; padding: 10px 12px; border: 1px solid #d6a09e; border-radius: 999px; color: #523e3d; font-size: 11px; font-weight: 700; }
+  .back-link:hover { color: #fffdf8; background: var(--green); }
   .back-link span { margin-left: 6px; color: var(--orange); }
-  main { min-height: calc(100vh - 190px); padding: 46px 0 70px; }
-  .page-heading { margin-bottom: 28px; }
+  main { min-height: calc(100vh - 190px); padding: 28px 0 48px; }
+  .page-heading { margin-bottom: 18px; }
   .eyebrow { color: #758174; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
   .eyebrow > span { margin-right: 7px; color: var(--orange); font-size: 14px; vertical-align: -1px; }
-  .page-heading h1 { margin: 12px 0 9px; font-family: var(--serif); font-size: clamp(36px, 5vw, 52px); font-weight: 500; letter-spacing: -.06em; line-height: 1; }
+  .page-heading h1 { margin: 12px 0 9px; font-family: var(--serif); font-size: clamp(30px, 4vw, 43px); font-weight: 500; letter-spacing: -.06em; line-height: 1; }
   .page-heading h1 em { color: #82927a; font-weight: 500; }
   .page-heading p, .panel-heading p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
   h2, h3, p { margin-top: 0; }
@@ -708,7 +1105,11 @@
   .dashboard-heading, .inventory-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
   .dashboard-heading { margin-bottom: 20px; }
   .dashboard-heading h2, .inventory-heading h2 { margin-bottom: 0; }
-  .admin-layout { display: grid; grid-template-columns: minmax(270px, .75fr) minmax(0, 1.25fr); align-items: start; gap: 22px; }
+  .admin-layout { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 22px; }
+  .admin-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .admin-tabs button { min-height: 44px; padding: 8px; border: 1px solid #cfd7cb; border-radius: 5px; background: var(--paper); color: var(--green); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .admin-tabs button[aria-selected="true"] { background: var(--green); color: #fffdf8; border-color: var(--green); }
+  .admin-tabs button:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
   .editor-panel, .inventory-panel { padding: 22px; }
   .editor-panel .panel-heading h2 { font-size: 22px; }
   .form-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
@@ -744,14 +1145,16 @@
     .admin-layout { grid-template-columns: 1fr; }
   }
 
-  @media (max-width: 580px) {
-    .page-width { width: calc(100% - 32px); }
-    .site-header { height: 68px; gap: 10px; padding-inline: 12px; }
-    .brand-mark { width: 29px; height: 29px; }
-    .brand-name { font-size: 15px; }
-    .brand-name b { font-size: 13px; }
-    .back-link { font-size: 9px; }
-    main { padding: 35px 0 48px; }
+  @media (max-width: 650px) {
+    .page-width { width: min(100% - 36px, 500px); }
+    .site-header { height: 64px; gap: 8px; padding-inline: 12px; }
+    .brand { gap: 5px; }
+    .brand-mark { width: 26px; height: 26px; }
+    .brand-name { font-size: 14px; }
+    .brand-name b { font-size: 12px; }
+    .back-link { padding: 8px; font-size: 9px; }
+    main { padding: 20px 0 36px; }
+    .page-heading h1 { font-size: clamp(28px, 8vw, 36px); }
     .login-panel, .editor-panel, .inventory-panel { padding: 18px; }
     .form-row { grid-template-columns: minmax(0, 1fr); gap: 0; }
     .form-actions { flex-direction: column; }
@@ -772,4 +1175,44 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
   }
+  .photo-picker { position: relative; margin-bottom: 18px; }
+  .photo-label { display: grid; justify-items: center; gap: 8px; padding: 20px 12px; border: 1px dashed #aabca5; border-radius: 6px; background: #f8f6ef; color: var(--green); cursor: pointer; text-align: center; font-size: 14px; }
+  .photo-label span { font-size: 10px; color: #687368; }
+  .photo-picker input[type="file"] { margin-top: 8px; }
+  #cover-preview { width: auto; max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 4px; }
+  #clear-cover { margin-top: 8px; }
+  .optional-details { margin-top: 16px; color: var(--green); font-size: 12px; }
+  .optional-details summary { cursor: pointer; font-weight: 700; padding: 8px 0; }
+  .optional-details label { display: block; margin: 8px 0 6px; font-size: 11px; }
+  @media (max-width: 650px) {
+    #book-form input:not([type="checkbox"]):not([type="file"]), #book-form select, #book-form textarea { font-size: 16px; }
+    #book-form > label, #book-form .form-row label { font-size: 12px; }
+    .form-actions .primary-button { font-size: 14px; }
+  }
+  .quick-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .quick-options button { flex: 1 0 auto; min-height: 44px; padding: 6px 10px; border: 1px solid #cfd7cb; border-radius: 5px; background: var(--paper); color: var(--green); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .quick-options button[data-quick-condition="Excellent"] { background: #e0ead9; }
+  .quick-options button[data-quick-condition="Very good"] { background: #f1e5c9; }
+  .quick-options button[data-quick-condition="Good"] { background: #f1dcd3; }
+  .quick-options button[aria-pressed="true"] { color: #fffdf8; background: var(--green); border-color: var(--green); }
+  .quick-options button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+  .isbn-picker { padding: 12px; margin-bottom: 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--cream); }
+  .isbn-picker label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+  .isbn-row { display: flex; gap: 8px; align-items: center; }
+  .isbn-row input { min-width: 0; }
+  .isbn-row button { flex-shrink: 0; }
+  #scan-isbn, #stop-scan { margin-top: 8px; min-height: 44px; }
+  #isbn-video { display: block; width: 100%; max-height: 220px; object-fit: contain; margin-top: 8px; background: #263d32; border-radius: 5px; }
+  #isbn-status { margin: 8px 0 0; font-size: 12px; color: var(--green); }
+  #isbn-status:empty { display: none; }
+  .stock-counters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 18px; }
+  .stock-counters > div { display: grid; justify-items: center; gap: 4px; padding: 14px 5px; border: 1px solid var(--line); border-radius: 5px; background: var(--cream); }
+  .stock-counters strong { font-family: var(--serif); font-size: 27px; color: var(--green); }
+  .stock-counters span { font-size: 11px; color: var(--green); text-align: center; }
+  .inventory-tools { margin-bottom: 14px; }
+  .inventory-tools label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+  .stock-filters { display: flex; gap: 6px; margin-top: 10px; }
+  .stock-filters button { flex: 1; min-height: 44px; border: 1px solid #cfd7cb; border-radius: 5px; background: var(--paper); color: var(--green); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+  .stock-filters button[aria-pressed="true"] { background: var(--green); color: #fffdf8; border-color: var(--green); }
+  @media (max-width: 650px) { #inventory-search { font-size: 16px; } }
 </style>
