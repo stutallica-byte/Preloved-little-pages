@@ -196,7 +196,7 @@
   .avatar-stack span:nth-child(3) { background: #f0d7c4; }
 
   .hero-art { position: relative; min-height: 345px; display: grid; place-items: center; }
-  .hero-photo { position: relative; width: min(100%, 465px); height: 335px; overflow: hidden; border-radius: 48% 48% 8px 8px; background: #e3d7c2; }
+  .hero-photo { position: relative; width: min(100%, 510px); height: 370px; overflow: hidden; border-radius: 24px 24px 12px 12px; background: #e3d7c2; }
   .hero-photo::after { position: absolute; inset: 0; content: ''; background: linear-gradient(180deg, transparent 62%, rgba(32, 45, 37, .1)); }
   .hero-photo img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center 54%; }
   .hero-sticker { position: absolute; bottom: 24px; left: 1%; z-index: 1; width: 118px; height: 118px; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: rotate(-10deg); border: 1px solid #ead9ac; border-radius: 50%; background: #f3e7c7; color: var(--green); text-align: center; font-family: var(--serif); font-size: 15px; line-height: 1.15; box-shadow: 0 7px 22px #263d3212; }
@@ -423,7 +423,7 @@
   .homepage-logo-banner img { max-height: 24svh; width: 100%; object-fit: contain; }
   .hero { min-height: 0; padding: 12px 0 20px; gap: 24px; }
   .hero-art { min-height: 0; }
-  .hero-photo { height: min(335px, 40svh); }
+  .hero-photo { height: min(370px, 44svh); }
   @media (max-width: 650px) {
     .site-header { height: 64px; }
     .homepage-logo-banner { margin: 8px auto 0; }
@@ -434,13 +434,13 @@
     .hero-copy > p { margin-bottom: 12px; line-height: 1.45; }
     .hero-note { margin-top: 10px; }
     .hero-art { min-height: 0; margin-top: 0; }
-    .hero-photo { height: clamp(100px, 22svh, 190px); width: 84%; }
+    .hero-photo { height: clamp(115px, 26svh, 225px); width: 94%; }
     .hero-sticker { width: 76px; height: 76px; font-size: 10px; bottom: 4px; }
     .sticker-sparkle { top: 5px; font-size: 12px; }
   }
   @media (max-width: 650px) and (max-height: 650px) {
     .homepage-logo-banner img { max-height: 16svh; }
-    .hero-photo { height: 16svh; }
+    .hero-photo { height: 19svh; }
     .hero h1 { font-size: clamp(28px, 8.5vw, 36px); }
   }
 </style>
