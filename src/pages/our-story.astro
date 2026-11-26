@@ -18,25 +18,7 @@
     />
   </head>
   <body>
-    <header class="site-header">
-      <div class="header-brand-group">
-        <a class="brand" href="/" aria-label="Preloved Little Pages — Home">
-          <span class="brand-mark" aria-hidden="true"><img src="/preloved-little-pages-logo.webp" alt="" width="56" height="56" decoding="async" /></span>
-          <span class="brand-name">Preloved <b>Little Pages</b></span>
-        </a>
-        <a class="brand-story-link" href="/our-story/#our-story">Our Story <span aria-hidden="true">→</span></a>
-      </div>
-
-      <nav class="main-nav" aria-label="Main navigation">
-        <a href="/books/">Shop books</a>
-        <a href="/our-story/#how-it-works">How it works</a>
-        <a href="/our-story/#our-story">Our story</a>
-      </nav>
-
-      <a class="basket-link" data-basket-link href="/basket/" aria-label="Basket, 0 books">
-        Basket <span class="basket-count" data-basket-count>0</span>
-      </a>
-    </header>
+    
 
     <main id="top" class="page-width story-layout"><div class="story-heading"><h1>Our Story</h1><a class="text-link" href="/">← Home</a></div>
       <section class="story-section page-width" id="our-story" aria-labelledby="story-title">
@@ -113,28 +95,7 @@
     </main>
   </body>
 </html>
-<script>
-  import { getBasketIds, onBasketChange } from '../lib/basket';
 
-  const basketLinks = [...document.querySelectorAll<HTMLAnchorElement>('[data-basket-link]')];
-
-  function updateBasketCount() {
-    try {
-      const count = getBasketIds().length;
-      for (const link of basketLinks) {
-        const badge = link.querySelector<HTMLElement>('[data-basket-count]');
-        if (badge) badge.textContent = String(count);
-        link.setAttribute('aria-label', `Basket, ${count} ${count === 1 ? 'book' : 'books'}`);
-      }
-    } catch (error) {
-      console.error('Unable to read the saved basket:', error);
-    }
-  }
-
-  updateBasketCount();
-  onBasketChange(updateBasketCount);
-
-</script>
 
 <style>
 :root{--ink:#263d32;--green:#355747;--cream:#f8f6ef;--serif:'Fraunces',Georgia,serif;--sans:'DM Sans',Arial,sans-serif}
